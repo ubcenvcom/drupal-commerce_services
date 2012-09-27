@@ -1,0 +1,158 @@
+<?php
+
+/**
+ * @file
+ * Defines Services resources for Drupal Commerce entities and systems.
+ */
+
+
+/**
+ * Implements hook_services_resources().
+ */
+function commerce_services_services_resources() {
+  $resources = array();
+
+  if (module_exists('node') && module_exists('commerce_product_reference')) {
+    // Define a resource for product display nodes, which returns node and
+    // product data together that is more useful for building complex Add to
+    // Cart forms than just product data.
+    $resources['product-displays'] = array(
+      // Define the index callback for a GET to /product-displays.
+      'index' => array(
+        'help' => 'Returns a pageable list of product displays.',
+        'callback' => 'commerce_services_product_displays_index',
+        'file' => array('type' => 'inc', 'module' => 'commerce_services', 'name' => 'resources/product_displays'),
+        'access arguments' => array('access content'),
+        'args' => array(
+          array(
+            'name' => 'fields',
+            'type' => 'string',
+		    	  'description' => 'An array of field or property names from product display nodes to include in the result set.',
+		    	  'optional' => TRUE,
+		    	  'source' => array('param' => 'fields'),
+		    	  'default value' => '',
+            'commerce_services_explode' => ',',
+            'commerce_services_required_fields' => array('nid'),
+          ),
+          array(
+            'name' => 'limit',
+            'type' => 'int',
+            'description' => 'The number of product displays to retrieve.',
+            'optional' => TRUE,
+            'source' => array('param' => 'limit'),
+            'default value' => 10,
+          ),
+          array(
+            'name' => 'offset',
+            'type' => 'int',
+            'description' => 'The zero-based index from which to start retrieving product displays.',
+            'optional' => TRUE,
+            'source' => array('param' => 'offset'),
+            'default value' => 0,
+          ),
+        ),
+      ),
+
+      // Define the retrieve callback for a GET to /product-displays/%node.
+      'retrieve' => array(
+        'help' => 'Returns a single product display specified by its node ID.',
+        'callback' => 'commerce_services_product_displays_retrieve',
+        'file' => array('type' => 'inc', 'module' => 'commerce_services', 'name' => 'resources/product_displays'),
+        'access arguments' => array('access content'),
+        'args' => array(
+          array(
+            'name' => 'nid',
+            'type' => 'int',
+            'description' => 'The node ID of the product display to retrieve.',
+            'optional' => FALSE,
+            'source' => array('path' => 0),
+          ),
+        ),
+      ),
+    );
+  }
+
+  if (module_exists('commere_product')) {
+    // Define a resource for actual Commerce Product entities, including actions
+    // to add particular products to a shopping cart.
+    // $resources['products'] = array();
+  }
+
+  if (module_exists('commerce_cart')) {
+    // Define a resource for shopping cart orders, which retrieve and manipulate
+    // orders by user ID.
+    // $resources['carts'] = array();
+  }
+
+  if (module_exists('commerce_order')) {
+    // Define a resource for Commerce Order entities.
+    // $resources['orders'] = array();
+  }
+
+  return $resources;
+}
+
+/**
+ * Implements hook_services_request_preprocess_alter().
+ *
+ * For certain resources, we define arguments as strings that should be exploded
+ * into arrays prior to being passed to the resource callback. To indicate this,
+ * our argument definitions may include a commerce_services_explode key whose
+ * value is the delimiter this preprocess function will use to explode the value
+ * of that argument into an array.
+ *
+ * Example: the product-displays resource includes an index callback definition
+ * that may accept a fields argument. This argument was defined as a string
+ * derived from the GET parameters of the API request, but prior to invoking the
+ * index callback, this preprocess function will see that the argument indicates
+ * it is a comma delimited string and explode it accordingly.
+ *
+ * Additionally, when a fields argument contains a value from the API request,
+ * there may be certain fields or properties that should always be returned even
+ * if not included in the argument value. These may be indicated in argument
+ * definitions via the commerce_services_required_fields array. This preprocess
+ * function will ensure that the fields array always includes required fields.
+ */
+function commerce_services_services_request_preprocess_alter($controller, &$args) {
+  // Loop over the argument metadata in the controller looking for any that need
+  // to be exploded into arrays.
+  foreach ($controller['args'] as $key => $value) {
+    if (!empty($value['commerce_services_explode'])) {
+      // Explode the argument using the specified delimiter.
+      if (!empty($args[$key])) {
+        $args[$key] = explode($value['commerce_services_explode'], $args[$key]);
+      }
+      else {
+        // Otherwise ensure it is just converted to an array.
+        $args[$key] = array();
+      }
+    }
+
+    // If this argument is for a fields array that we want to ensure contains
+    // one or more required values...
+    if (!empty($value['commerce_services_required_fields']) && !empty($args[$key])) {
+      foreach ($value['commerce_services_required_fields'] as $required_field) {
+        if (!in_array($required_field, $args[$key])) {
+          $args[$key][] = $required_field;
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Unsets properties from a stdClass object so that only those desired remain.
+ *
+ * @param $object
+ *   A stdClass object typically representing an entity.
+ * @param $fields
+ *   An array of field or property names to leave on the object. All others will
+ *   be unset.
+ */
+function commerce_services_object_filter($object, $fields) {
+  foreach ((array) $object as $key => $value) {
+    if (!in_array($key, $fields)) {
+      unset($object->$key);
+    }
+  }
+}

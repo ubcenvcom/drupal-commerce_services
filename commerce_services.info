@@ -1,0 +1,4 @@
+name = Commerce Services
+description = Defines Services resources for Drupal Commerce entities and systems.
+package = Services
+core = 7.x
