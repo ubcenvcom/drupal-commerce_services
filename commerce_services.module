@@ -27,10 +27,10 @@ function commerce_services_services_resources() {
           array(
             'name' => 'fields',
             'type' => 'string',
-		    	  'description' => 'An array of field or property names from product display nodes to include in the result set.',
-		    	  'optional' => TRUE,
-		    	  'source' => array('param' => 'fields'),
-		    	  'default value' => '',
+            'description' => 'An array of field or property names from product display nodes to include in the result set.',
+            'optional' => TRUE,
+            'source' => array('param' => 'fields'),
+            'default value' => '',
             'commerce_services_explode' => ',',
             'commerce_services_required_fields' => array('nid'),
           ),
@@ -72,10 +72,63 @@ function commerce_services_services_resources() {
     );
   }
 
-  if (module_exists('commere_product')) {
+  if (module_exists('commerce_product')) {
     // Define a resource for actual Commerce Product entities, including actions
     // to add particular products to a shopping cart.
-    // $resources['products'] = array();
+    $resources['product'] = array(
+      // Define the index callback for a GET to /product.
+      'index' => array(
+        'help' => 'Returns a pageable list of products.',
+        'callback' => 'commerce_services_product_index',
+        'file' => array('type' => 'inc', 'module' => 'commerce_services', 'name' => 'resources/product'),
+        'access arguments' => array('view any commerce_product entity'),
+        'args' => array(
+          array(
+            'name' => 'fields',
+            'type' => 'string',
+            'description' => 'An array of field or property names from products to include in the result set.',
+            'optional' => TRUE,
+            'source' => array('param' => 'fields'),
+            'default value' => '',
+            'commerce_services_explode' => ',',
+            'commerce_services_required_fields' => array('product_id'),
+          ),
+          array(
+            'name' => 'limit',
+            'type' => 'int',
+            'description' => 'The number of products to retrieve.',
+            'optional' => TRUE,
+            'source' => array('param' => 'limit'),
+            'default value' => 10,
+          ),
+          array(
+            'name' => 'offset',
+            'type' => 'int',
+            'description' => 'The zero-based index from which to start retrieving products.',
+            'optional' => TRUE,
+            'source' => array('param' => 'offset'),
+            'default value' => 0,
+          ),
+        ),
+      ),
+
+      // Define the retrieve callback for a GET to /products/%commerce_product.
+      'retrieve' => array(
+        'help' => 'Returns a single product specified by its product ID.',
+        'callback' => 'commerce_services_product_retrieve',
+        'file' => array('type' => 'inc', 'module' => 'commerce_services', 'name' => 'resources/product'),
+        'access arguments' => array('view any commerce_product entity'),
+        'args' => array(
+          array(
+            'name' => 'product_id',
+            'type' => 'int',
+            'description' => 'The product ID of the product to retrieve.',
+            'optional' => FALSE,
+            'source' => array('path' => 0),
+          ),
+        ),
+      ),
+    );
   }
 
   if (module_exists('commerce_cart')) {
