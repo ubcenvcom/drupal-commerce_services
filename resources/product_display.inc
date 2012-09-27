@@ -22,7 +22,7 @@
  * @return
  *   An array of product display nodes.
  */
-function commerce_services_product_displays_index($fields, $limit, $offset) {
+function commerce_services_product_display_index($fields, $limit, $offset) {
   // Build a query to load all accessible nodes that contain product reference
   // fields, whether those fields have data or not.
   $query = new EntityFieldQuery();
@@ -68,6 +68,6 @@ function commerce_services_product_displays_index($fields, $limit, $offset) {
  * @return
  *   The requested product display node or FALSE if not found.
  */
-function commerce_services_product_displays_retrieve($nid) {
+function commerce_services_product_display_retrieve($nid) {
   return node_load($nid);
 }

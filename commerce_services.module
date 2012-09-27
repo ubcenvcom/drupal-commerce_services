@@ -16,12 +16,12 @@ function commerce_services_services_resources() {
     // Define a resource for product display nodes, which returns node and
     // product data together that is more useful for building complex Add to
     // Cart forms than just product data.
-    $resources['product-displays'] = array(
-      // Define the index callback for a GET to /product-displays.
+    $resources['product-display'] = array(
+      // Define the index callback for a GET to /product-display.
       'index' => array(
         'help' => 'Returns a pageable list of product displays.',
-        'callback' => 'commerce_services_product_displays_index',
-        'file' => array('type' => 'inc', 'module' => 'commerce_services', 'name' => 'resources/product_displays'),
+        'callback' => 'commerce_services_product_display_index',
+        'file' => array('type' => 'inc', 'module' => 'commerce_services', 'name' => 'resources/product_display'),
         'access arguments' => array('access content'),
         'args' => array(
           array(
@@ -53,11 +53,11 @@ function commerce_services_services_resources() {
         ),
       ),
 
-      // Define the retrieve callback for a GET to /product-displays/%node.
+      // Define the retrieve callback for a GET to /product-display/%node.
       'retrieve' => array(
         'help' => 'Returns a single product display specified by its node ID.',
-        'callback' => 'commerce_services_product_displays_retrieve',
-        'file' => array('type' => 'inc', 'module' => 'commerce_services', 'name' => 'resources/product_displays'),
+        'callback' => 'commerce_services_product_display_retrieve',
+        'file' => array('type' => 'inc', 'module' => 'commerce_services', 'name' => 'resources/product_display'),
         'access arguments' => array('access content'),
         'args' => array(
           array(
@@ -112,7 +112,7 @@ function commerce_services_services_resources() {
         ),
       ),
 
-      // Define the retrieve callback for a GET to /products/%commerce_product.
+      // Define the retrieve callback for a GET to /product/%commerce_product.
       'retrieve' => array(
         'help' => 'Returns a single product specified by its product ID.',
         'callback' => 'commerce_services_product_retrieve',
