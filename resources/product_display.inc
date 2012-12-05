@@ -28,6 +28,8 @@ function commerce_services_product_display_index($fields, $limit, $offset) {
   $query = new EntityFieldQuery();
   $query
     ->addTag('node_access')
+    ->addMetaData('op', 'view')
+    ->addMetaData('base_table', 'node')
     ->entityCondition('entity_type', 'node')
     ->entityCondition('bundle', array_keys(commerce_product_reference_node_types()))
     ->propertyCondition('status', 1)
@@ -60,6 +62,56 @@ function commerce_services_product_display_index($fields, $limit, $offset) {
 }
 
 /**
+ * Determines access to perform product display operations.
+ *
+ * @param $op
+ *   The operation being performed. One of 'view', 'update', 'create' or
+ *   'delete'.
+ * @param $args
+ *   Resource arguments passed through from the original request.
+ *
+ * @return
+ *   Boolean indicating whether or not the requested operation should be allowed.
+ */
+function commerce_services_product_display_access($op, $args) {
+  // First load the node ID from the arguments if available.
+  if ($op != 'create' && !empty($args[0])) {
+    $node = node_load($args[0]);
+  }
+
+  // If the request operation is a node create...
+  if ($op == 'create') {
+    // And the POSTed node object has a valid product display node type...
+    if (!empty($args[0]->type) && in_array($args[0]->type, commerce_product_reference_node_types())) {
+      // Return the user's access to create nodes of that type.
+      if (!node_access($op, $args[0]->type)) {
+        return services_error(t('Access to this operation not granted'), 401);
+      }
+      else {
+        return TRUE;
+      }
+    }
+    else {
+      // Otherwise throw an error with an appropriate error message.
+      return services_error(t('Valid product display node type required'), 400);
+    }
+  }
+
+  // If the node could be loaded, return the node_access() value for the operation.
+  if (!empty($node->nid)) {
+    if (!node_access($op, $node)) {
+      return services_error(t('Access to this operation not granted'), 401);
+    }
+    else {
+      return TRUE;
+    }
+  }
+  else {
+    return services_error(t('Product display not found'), 404);
+  }
+}
+
+/**
  * Returns a single product display node.
  *
  * @param $nid
@@ -69,5 +121,16 @@ function commerce_services_product_display_index($fields, $limit, $offset) {
  *   The requested product display node or FALSE if not found.
  */
 function commerce_services_product_display_retrieve($nid) {
-  return node_load($nid);
+  $node = node_load($nid);
+
+  // If the node exists, determine its URI and add it to the node.
+  if ($node) {
+    $uri = entity_uri('node', $node);
+    $node->path = url($uri['path'], array('absolute' => TRUE));
+
+    // Unset the uri property if it's on the node to prevent recursion.
+    unset($node->uri);
+  }
+
+  return $node;
 }

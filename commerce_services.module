@@ -58,7 +58,9 @@ function commerce_services_services_resources() {
         'help' => 'Returns a single product display specified by its node ID.',
         'callback' => 'commerce_services_product_display_retrieve',
         'file' => array('type' => 'inc', 'module' => 'commerce_services', 'name' => 'resources/product_display'),
-        'access arguments' => array('access content'),
+        'access callback' => 'commerce_services_product_display_access',
+        'access arguments' => array('view'),
+        'access arguments append' => TRUE,
         'args' => array(
           array(
             'name' => 'nid',
@@ -134,12 +136,12 @@ function commerce_services_services_resources() {
   if (module_exists('commerce_cart')) {
     // Define a resource for shopping cart orders, which retrieve and manipulate
     // orders by user ID.
-    // $resources['carts'] = array();
+    // $resources['cart'] = array();
   }
 
   if (module_exists('commerce_order')) {
     // Define a resource for Commerce Order entities.
-    // $resources['orders'] = array();
+    // $resources['order'] = array();
   }
 
   return $resources;
