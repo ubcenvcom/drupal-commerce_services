@@ -17,57 +17,97 @@ function commerce_services_services_resources() {
     // product data together that is more useful for building complex Add to
     // Cart forms than just product data.
     $resources['product-display'] = array(
-      // Define the index callback for a GET to /product-display.
-      'index' => array(
-        'help' => 'Returns a pageable list of product displays.',
-        'callback' => 'commerce_services_product_display_index',
-        'file' => array('type' => 'inc', 'module' => 'commerce_services', 'name' => 'resources/product_display'),
-        'access arguments' => array('access content'),
-        'args' => array(
-          array(
-            'name' => 'fields',
-            'type' => 'string',
-            'description' => 'An array of field or property names from product display nodes to include in the result set.',
-            'optional' => TRUE,
-            'source' => array('param' => 'fields'),
-            'default value' => '',
-            'commerce_services_explode' => ',',
-            'commerce_services_required_fields' => array('nid'),
-          ),
-          array(
-            'name' => 'limit',
-            'type' => 'int',
-            'description' => 'The number of product displays to retrieve.',
-            'optional' => TRUE,
-            'source' => array('param' => 'limit'),
-            'default value' => 10,
-          ),
-          array(
-            'name' => 'offset',
-            'type' => 'int',
-            'description' => 'The zero-based index from which to start retrieving product displays.',
-            'optional' => TRUE,
-            'source' => array('param' => 'offset'),
-            'default value' => 0,
+      '#api_version' => 3002,
+      'operations' => array(
+        // Define the index callback for a GET to /product-display.
+        'index' => array(
+          'help' => 'Returns a pageable list of product displays.',
+          'callback' => 'commerce_services_product_display_index',
+          'file' => array('type' => 'inc', 'module' => 'commerce_services', 'name' => 'resources/product_display'),
+          'access arguments' => array('access content'),
+          'args' => array(
+            array(
+              'name' => 'fields',
+              'type' => 'string',
+              'description' => 'A comma separated list of field or property names from product display nodes to include in the result set. Will be converted to an array before being passed to the operation callback.',
+              'optional' => TRUE,
+              'source' => array('param' => 'fields'),
+              'default value' => '',
+              'commerce_services_explode' => ',',
+              'commerce_services_required_fields' => array('nid'),
+            ),
+            array(
+              'name' => 'filter',
+              'type' => 'array',
+              'description' => 'An array of field or property names from product display nodes paired with values to use to filter the result set.',
+              'optional' => TRUE,
+              'source' => array('param' => 'filter'),
+              'default value' => array('status' => 1),
+              'commerce_services_field_populate' => 'node',
+            ),
+            array(
+              'name' => 'filter_op',
+              'type' => 'array',
+              'description' => 'An array of field or property names from product display nodes paired with the operator to use when filtering the result set.',
+              'optional' => TRUE,
+              'source' => array('param' => 'filter_op'),
+              'default value' => array(),
+              'commerce_services_match_keys' => array(
+                'arg' => 'filter',
+                'default value' => '=',
+              ),
+            ),
+            array(
+              'name' => 'sort_by',
+              'type' => 'string',
+              'optional' => TRUE,
+              'source' => array('param' => 'sort_by'),
+              'default value' => 'created',
+              'commerce_services_explode' => ',',
+            ),
+            array(
+              'name' => 'sort_order',
+              'type' => 'string',
+              'optional' => TRUE,
+              'source' => array('param' => 'sort_order'),
+              'default value' => 'DESC',
+              'commerce_services_explode' => ',',
+            ),
+            array(
+              'name' => 'limit',
+              'type' => 'int',
+              'description' => 'The number of product displays to retrieve.',
+              'optional' => TRUE,
+              'source' => array('param' => 'limit'),
+              'default value' => 10,
+            ),
+            array(
+              'name' => 'offset',
+              'type' => 'int',
+              'description' => 'The zero-based index from which to start retrieving product displays.',
+              'optional' => TRUE,
+              'source' => array('param' => 'offset'),
+              'default value' => 0,
+            ),
           ),
         ),
-      ),
 
-      // Define the retrieve callback for a GET to /product-display/%node.
-      'retrieve' => array(
-        'help' => 'Returns a single product display specified by its node ID.',
-        'callback' => 'commerce_services_product_display_retrieve',
-        'file' => array('type' => 'inc', 'module' => 'commerce_services', 'name' => 'resources/product_display'),
-        'access callback' => 'commerce_services_product_display_access',
-        'access arguments' => array('view'),
-        'access arguments append' => TRUE,
-        'args' => array(
-          array(
-            'name' => 'nid',
-            'type' => 'int',
-            'description' => 'The node ID of the product display to retrieve.',
-            'optional' => FALSE,
-            'source' => array('path' => 0),
+        // Define the retrieve callback for a GET to /product-display/%node.
+        'retrieve' => array(
+          'help' => 'Returns a single product display specified by its node ID.',
+          'callback' => 'commerce_services_product_display_retrieve',
+          'file' => array('type' => 'inc', 'module' => 'commerce_services', 'name' => 'resources/product_display'),
+          'access callback' => 'commerce_services_product_display_access',
+          'access arguments' => array('view'),
+          'access arguments append' => TRUE,
+          'args' => array(
+            array(
+              'name' => 'nid',
+              'type' => 'int',
+              'description' => 'The node ID of the product display to retrieve.',
+              'optional' => FALSE,
+              'source' => array('path' => 0),
+            ),
           ),
         ),
       ),
@@ -78,55 +118,58 @@ function commerce_services_services_resources() {
     // Define a resource for actual Commerce Product entities, including actions
     // to add particular products to a shopping cart.
     $resources['product'] = array(
-      // Define the index callback for a GET to /product.
-      'index' => array(
-        'help' => 'Returns a pageable list of products.',
-        'callback' => 'commerce_services_product_index',
-        'file' => array('type' => 'inc', 'module' => 'commerce_services', 'name' => 'resources/product'),
-        'access arguments' => array('view any commerce_product entity'),
-        'args' => array(
-          array(
-            'name' => 'fields',
-            'type' => 'string',
-            'description' => 'An array of field or property names from products to include in the result set.',
-            'optional' => TRUE,
-            'source' => array('param' => 'fields'),
-            'default value' => '',
-            'commerce_services_explode' => ',',
-            'commerce_services_required_fields' => array('product_id'),
-          ),
-          array(
-            'name' => 'limit',
-            'type' => 'int',
-            'description' => 'The number of products to retrieve.',
-            'optional' => TRUE,
-            'source' => array('param' => 'limit'),
-            'default value' => 10,
-          ),
-          array(
-            'name' => 'offset',
-            'type' => 'int',
-            'description' => 'The zero-based index from which to start retrieving products.',
-            'optional' => TRUE,
-            'source' => array('param' => 'offset'),
-            'default value' => 0,
+      '#api_version' => 3002,
+      'operations' => array(
+        // Define the index callback for a GET to /product.
+        'index' => array(
+          'help' => 'Returns a pageable list of products.',
+          'callback' => 'commerce_services_product_index',
+          'file' => array('type' => 'inc', 'module' => 'commerce_services', 'name' => 'resources/product'),
+          'access arguments' => array('view any commerce_product entity'),
+          'args' => array(
+            array(
+              'name' => 'fields',
+              'type' => 'string',
+              'description' => 'A comma separated list of field or property names from products to include in the result set.  Will be converted to an array before being passed to the operation callback.',
+              'optional' => TRUE,
+              'source' => array('param' => 'fields'),
+              'default value' => '',
+              'commerce_services_explode' => ',',
+              'commerce_services_required_fields' => array('product_id'),
+            ),
+            array(
+              'name' => 'limit',
+              'type' => 'int',
+              'description' => 'The number of products to retrieve.',
+              'optional' => TRUE,
+              'source' => array('param' => 'limit'),
+              'default value' => 10,
+            ),
+            array(
+              'name' => 'offset',
+              'type' => 'int',
+              'description' => 'The zero-based index from which to start retrieving products.',
+              'optional' => TRUE,
+              'source' => array('param' => 'offset'),
+              'default value' => 0,
+            ),
           ),
         ),
-      ),
 
-      // Define the retrieve callback for a GET to /product/%commerce_product.
-      'retrieve' => array(
-        'help' => 'Returns a single product specified by its product ID.',
-        'callback' => 'commerce_services_product_retrieve',
-        'file' => array('type' => 'inc', 'module' => 'commerce_services', 'name' => 'resources/product'),
-        'access arguments' => array('view any commerce_product entity'),
-        'args' => array(
-          array(
-            'name' => 'product_id',
-            'type' => 'int',
-            'description' => 'The product ID of the product to retrieve.',
-            'optional' => FALSE,
-            'source' => array('path' => 0),
+        // Define the retrieve callback for a GET to /product/%commerce_product.
+        'retrieve' => array(
+          'help' => 'Returns a single product specified by its product ID.',
+          'callback' => 'commerce_services_product_retrieve',
+          'file' => array('type' => 'inc', 'module' => 'commerce_services', 'name' => 'resources/product'),
+          'access arguments' => array('view any commerce_product entity'),
+          'args' => array(
+            array(
+              'name' => 'product_id',
+              'type' => 'int',
+              'description' => 'The product ID of the product to retrieve.',
+              'optional' => FALSE,
+              'source' => array('path' => 0),
+            ),
           ),
         ),
       ),
@@ -150,28 +193,81 @@ function commerce_services_services_resources() {
 /**
  * Implements hook_services_request_preprocess_alter().
  *
+ * This preprocess function performs a variety of Commerce Services specific
+ * operations on resource arguments. Any argument using one of the following
+ * keys on any resource will be preprocessed:
+ *
+ * commerce_services_explode:
+ *
  * For certain resources, we define arguments as strings that should be exploded
  * into arrays prior to being passed to the resource callback. To indicate this,
  * our argument definitions may include a commerce_services_explode key whose
  * value is the delimiter this preprocess function will use to explode the value
  * of that argument into an array.
  *
- * Example: the product-displays resource includes an index callback definition
+ * Example: the product-display resource includes an index callback definition
  * that may accept a fields argument. This argument was defined as a string
  * derived from the GET parameters of the API request, but prior to invoking the
  * index callback, this preprocess function will see that the argument indicates
  * it is a comma delimited string and explode it accordingly.
+ *
+ * commerce_services_required_fields:
  *
  * Additionally, when a fields argument contains a value from the API request,
  * there may be certain fields or properties that should always be returned even
  * if not included in the argument value. These may be indicated in argument
  * definitions via the commerce_services_required_fields array. This preprocess
  * function will ensure that the fields array always includes required fields.
+ *
+ * commerce_services_field_populate:
+ *
+ * As a best practice, we really try to avoid array notation in our query
+ * parameters. However, if you want a resource callback argument to be an
+ * associative array, this would typically be your only option. The primary use
+ * case in Commerce Services is to apply a filter to an index query, where you
+ * would specify a field or property name and the corresponding value that the
+ * query should be filtered by: GET /product-display?filter[status]=1
+ *
+ * To avoid this, we make the commerce_services_field_populate option available.
+ * Its value should be the entity type for the query that will be used to
+ * generate the response. During preprocessing, this function will look for any
+ * query parameter whose key matches a field or property name on the given
+ * entity type and add it directly to the argument's array. Thus, instead of the
+ * array notation demonstrated above, you could: GET /product-display?status=1
+ *
+ * The only exception to this will be field or property names that collide with
+ * actual argument names for the operation callback. Thus, if the index
+ * operation actually had an argument called status, you would have to revert to
+ * array notation to apply a filter on the status property.
+ *
+ * commerce_services_match_keys:
+ *
+ * Finally, this preprocess function also accommodates key matching between
+ * related array arguments. One argument may specify another argument whose keys
+ * should all be represented in its own value array, providing a default value
+ * to fill in for any keys that are missing.
+ *
+ * Example: the product-display resource includes an index callback definition
+ * that may accept filter and filter_op array arguments. In the event that an
+ * operator is not specified for a particular filter, it should default to a
+ * simple equality check with the '=' operator. Therefore, the filter_op
+ * argument uses the commerce_services_match_keys property to specify that its
+ * array keys should match those of the filter argument, using '=' as the
+ * default value.
  */
 function commerce_services_services_request_preprocess_alter($controller, &$args) {
-  // Loop over the argument metadata in the controller looking for any that need
-  // to be exploded into arrays.
+  // Build an associative array of arguments whose keys are their names and
+  // values their numeric key in the $args array.
+  $arg_names = array();
+
   foreach ($controller['args'] as $key => $value) {
+    $arg_names[$value['name']] = $key;
+  }
+
+  // Loop over the argument metadata in the controller looking for any that
+  // include any of our special keys.
+  foreach ($controller['args'] as $key => $value) {
+    // If this argument needs to be exploded into an array...
     if (!empty($value['commerce_services_explode'])) {
       // Explode the argument using the specified delimiter.
       if (!empty($args[$key])) {
@@ -192,6 +288,67 @@ function commerce_services_services_request_preprocess_alter($controller, &$args
         }
       }
     }
+
+    // If this argument should be populated from other query parameters that
+    // don't match other arguments on the operation...
+    if (!empty($value['commerce_services_field_populate'])) {
+      // Loop over the query parameters.
+      foreach ($_GET as $param_key => $param_value) {
+        // Continue if this is either the 'q' parameter or the name of an
+        // argument for the operation callback.
+        if ($param_key === 'q' || in_array($param_key, array_keys($arg_names), TRUE)) {
+          continue;
+        }
+
+        // If this parameter key is a property for the specified entity type,
+        // add it to the argument's value array now.
+        if (in_array($param_key, array_keys(commerce_services_entity_type_properties($value['commerce_services_field_populate'])), TRUE)) {
+          $args[$key][$param_key] = $param_value;
+        }
+        else {
+          // Otherwise look and see if the parameter key begins with a field
+          // name, assuming it must be either a field name or field column name.
+          foreach (array_keys(commerce_services_entity_type_fields($value['commerce_services_field_populate'])) as $field_name) {
+            if (strpos($param_key, $field_name) === 0) {
+              $field_info = field_info_field($field_name);
+
+              // If it is the field name and the field type has a single column
+              // schema, add it to the argument's value array now.
+              if ($field_name == $param_key && count($field_info['columns']) == 1) {
+                $args[$key][$param_key] = $param_value;
+                break;
+              }
+              else {
+                // Otherwise if the parameter key contains a valid column
+                // specification for the field type, add it to the argument's
+                // value array as well.
+                $column = substr($param_key, strlen($field_name) + 1);
+
+                if (in_array($column, array_keys($field_info['columns']))) {
+                  $args[$key][$param_key] = $param_value;
+                  break;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // If this argument is an associative array that needs keys matching some
+    // other array argument...
+    if (!empty($value['commerce_services_match_keys'])) {
+      $matching_arg_key = $arg_names[$value['commerce_services_match_keys']['arg']];
+
+      if (!empty($args[$matching_arg_key])) {
+        // Loop over the argument value that this argument's keys should match.
+        foreach ($args[$matching_arg_key] as $arg_key => $arg_value) {
+          if (empty($args[$key][$arg_key])) {
+            $args[$key][$arg_key] = $value['commerce_services_match_keys']['default value'];
+          }
+        }
+      }
+    }
   }
 }
 
@@ -208,6 +365,218 @@ function commerce_services_object_filter($object, $fields) {
   foreach ((array) $object as $key => $value) {
     if (!in_array($key, $fields)) {
       unset($object->$key);
+    }
+  }
+}
+
+/**
+ * Returns a list of properties for the specified entity type.
+ *
+ * For the purpose of the Commerce Services module, the properties returned are
+ * those that correspond to a database column as determined by the Entity API.
+ * These may be used to filter and sort index queries.
+ *
+ * @param $entity_type
+ *   Machine-name of the entity type whose properties should be returned.
+ *
+ * @return
+ *   An associative array of properties for the specified entity type with the
+ *   key being the property name and the value being the corresponding schema
+ *   field on the entity type's base table.
+ */
+function commerce_services_entity_type_properties($entity_type) {
+  $properties = drupal_static(__FUNCTION__);
+
+  if (!isset($properties[$entity_type])) {
+    $info = entity_get_property_info($entity_type);
+    $properties[$entity_type] = array();
+
+    // Loop over only the properties of the entity type.
+    foreach ($info['properties'] as $key => $value) {
+      // If the value specifies a schema field...
+      if (!empty($value['schema field'])) {
+        $properties[$entity_type][$key] = $value['schema field'];
+      }
+    }
+  }
+
+  return $properties[$entity_type];
+}
+
+/**
+ * Returns a list of fields for the specified entity type.
+ *
+ * @param $entity_type
+ *   Machine-name of the entity type whose properties should be returned.
+ * @param $bundle
+ *   Optional bundle name to limit the returned fields to.
+ *
+ * @return
+ *   An associative array of fields for the specified entity type with the key
+ *   being the field name and the value being the Entity API property type.
+ */
+function commerce_services_entity_type_fields($entity_type, $bundle = NULL) {
+  $fields = drupal_static(__FUNCTION__);
+
+  if (!isset($fields[$entity_type])) {
+    $info = entity_get_property_info($entity_type);
+    $fields = array();
+
+    // Loop over the bundles info to inspect their fields.
+    foreach ($info['bundles'] as $bundle_name => $bundle_info) {
+      // Loop over the properties on the bundle to find field information.
+      foreach ($bundle_info['properties'] as $key => $value) {
+        if (!empty($value['field'])) {
+          $fields[$entity_type][$bundle_name][$key] = $value['type'];
+        }
+      }
+    }
+  }
+
+  // If a specific bundle's fields was requested, return just those.
+  if (!empty($bundle)) {
+    return $fields[$entity_type][$bundle];
+  }
+  else {
+    // Otherwise combine all the fields for various bundles of the entity type
+    // into a single return value.
+    $combined_fields = array();
+
+    foreach ($fields[$entity_type] as $bundle_name => $bundle_fields) {
+      $combined_fields += $bundle_fields;
+    }
+
+    return $combined_fields;
+  }
+}
+
+/**
+ * Adds property and field conditions to an index EntityFieldQuery.
+ *
+ * @param $query
+ *   The EntityFieldQuery object being built for the index query.
+ * @param $entity_type
+ *   Machine-name of the entity type of the index query.
+ * @param $filter
+ *   An associative array of property names, single column field names, or
+ *   multi-column field column names with their values to use to filter the
+ *   result set of the index request.
+ * @param $filter_op
+ *   An associative array of field and property names with the operators to use
+ *   when applying their filter conditions to the index request query.
+ */
+function commerce_services_index_query_filter($query, $entity_type, $filter, $filter_op) {
+  // Loop over each filter field to add them as property or field conditions on
+  // the query object. This function assumes the $filter and $filter_op arrays
+  // contain matching keys to set the correct operator to the filter fields.
+  foreach ($filter as $filter_field => $filter_value) {
+    // Determine the corresponding operator for this filter field, defaulting to
+    // = in case of an erroneous request.
+    $operator = '=';
+
+    if (!empty($filter_op[$filter_field])) {
+      $operator = $filter_op[$filter_field];
+    }
+
+    // If the current filter field is a property, use a property condition.
+    $properties = commerce_services_entity_type_properties($entity_type);
+
+    if (in_array($filter_field, array_keys($properties))) {
+      $query->propertyCondition($properties[$filter_field], $filter_value, $operator);
+    }
+    else {
+      // Look for the field name among the entity type's field list.
+      foreach (commerce_services_entity_type_fields($entity_type) as $field_name => $field_type) {
+        // If the filter field begins with a field name, then either the filter
+        // field is the field name or is a column of the field.
+        if (strpos($filter_field, $field_name) === 0) {
+          $field_info = field_info_field($field_name);
+
+          // If it is the field name and the field type has a single column
+          // schema, add the field condition to the index query.
+          if ($field_name == $filter_field && count($field_info['columns']) == 1) {
+            $column = key($field_info['columns']);
+            $query->fieldCondition($field_name, $column, $filter_value, $operator);
+            break;
+          }
+          else {
+            // Otherwise if the filter field contains a valid column specification
+            // for the field type, add the field condition to the index query.
+            $column = substr($filter_field, strlen($field_name) + 1);
+
+            if (in_array($column, array_keys($field_info['columns']))) {
+              $query->fieldCondition($field_name, $column, $filter_value, $operator);
+              break;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Adds property and field order by directions to an index EntityFieldQuery.
+ *
+ * @param $query
+ *   The EntityFieldQuery object being built for the index query.
+ * @param $entity_type
+ *   Machine-name of the entity type of the index query.
+ * @param $sort_by
+ *   An array of database fields to sort the query by, with sort fields being
+ *   valid properties, single column field names, or multi-column field column
+ *   names for the matching entity type.
+ * @param $sort_order
+ *   The corresponding sort orders for the fields specified in the $sort_by
+ *   array; one of either 'DESC' or 'ASC'.
+ */
+function commerce_services_index_query_sort($query, $entity_type, $sort_by, $sort_order) {
+  // Loop over each sort field to add them as property or field order by
+  // directions on the query object. This function assumes the $sort_by and
+  // $sort_order arrays contain an equal number of elements with keys matching
+  // the sort field to the appropriate sort order.
+  foreach ($sort_by as $sort_key => $sort_field) {
+    // Determine the corresponding sort direction for this sort field,
+    // defaulting to DESC in case of an erroneous request.
+    $direction = 'DESC';
+
+    if (!empty($sort_order[$sort_key])) {
+      $direction = strtoupper($sort_order[$sort_key]);
+    }
+
+    // If the current sort field is a property, use a property condition.
+    $properties = commerce_services_entity_type_properties($entity_type);
+
+    if (in_array($sort_field, array_keys($properties))) {
+      $query->propertyOrderBy($properties[$sort_field], $direction);
+    }
+    else {
+      // Look for the field name among the entity type's field list.
+      foreach (commerce_services_entity_type_fields($entity_type) as $field_name => $field_type) {
+        // If the sort field begins with a field name, then either the sort
+        // field is the field name or is a column of the field.
+        if (strpos($sort_field, $field_name) === 0) {
+          $field_info = field_info_field($field_name);
+
+          // If it is the field name and the field type has a single column
+          // schema, add the field condition to the index query.
+          if ($field_name == $sort_field && count($field_info['columns']) == 1) {
+            $column = key($field_info['columns']);
+            $query->fieldOrderBy($field_name, $column, $direction);
+            break;
+          }
+          else {
+            // Otherwise if the sort field contains a valid column specification
+            // for the field type, add the field condition to the index query.
+            $column = substr($sort_field, strlen($field_name) + 1);
+
+            if (in_array($column, array_keys($field_info['columns']))) {
+              $query->fieldOrderBy($field_name, $column, $direction);
+              break;
+            }
+          }
+        }
+      }
     }
   }
 }

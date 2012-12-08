@@ -14,6 +14,20 @@
  *   display node data. If empty, nodes will be returned as loaded with the
  *   exception of rdf_mapping data, which will only ever be included in an index
  *   if it is explicitly requested.
+ * @param $filter
+ *   An associative array of property names, single column field names, or
+ *   multi-column field column names with their values to use to filter the
+ *   result set of the index request.
+ * @param $filter_op
+ *   An associative array of field and property names with the operators to use
+ *   when applying their filter conditions to the index request query.
+ * @param $sort_by
+ *   An array of database fields to sort the query by, with sort fields being
+ *   valid properties, single column field names, or multi-column field column
+ *   names for the matching entity type.
+ * @param $sort_order
+ *   The corresponding sort orders for the fields specified in the $sort_by
+ *   array; one of either 'DESC' or 'ASC'.
  * @param $limit
  *   The number of product displays to retrieve.
  * @param $offset
@@ -22,7 +36,7 @@
  * @return
  *   An array of product display nodes.
  */
-function commerce_services_product_display_index($fields, $limit, $offset) {
+function commerce_services_product_display_index($fields, $filter, $filter_op, $sort_by, $sort_order, $limit, $offset) {
   // Build a query to load all accessible nodes that contain product reference
   // fields, whether those fields have data or not.
   $query = new EntityFieldQuery();
@@ -32,14 +46,16 @@ function commerce_services_product_display_index($fields, $limit, $offset) {
     ->addMetaData('base_table', 'node')
     ->entityCondition('entity_type', 'node')
     ->entityCondition('bundle', array_keys(commerce_product_reference_node_types()))
-    ->propertyCondition('status', 1)
-    ->propertyOrderBy('sticky', 'DESC')
-    ->propertyOrderBy('created', 'DESC')
     ->range($offset, $limit);
 
-  $result = $query->execute();
+  // Add the specified property and field condtions to the query.
+  commerce_services_index_query_filter($query, 'node', $filter, $filter_op);
 
-  // Load the nodes returned by the query.
+  // Add the specified sort conditions to the query.
+  commerce_services_index_query_sort($query, 'node', $sort_by, $sort_order);
+
+  // Execute the query and load the nodes it returns.
+  $result = $query->execute();
   $nodes = node_load_multiple(array_keys($result['node']));
 
   // Unset the rdf_mapping key from any loaded node unless explicitly included
