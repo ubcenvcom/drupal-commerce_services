@@ -60,6 +60,7 @@ function commerce_services_services_resources() {
             array(
               'name' => 'sort_by',
               'type' => 'string',
+              'description' => 'A comma separated list of field or property names from product display nodes by which to sort the result set.',
               'optional' => TRUE,
               'source' => array('param' => 'sort_by'),
               'default value' => 'created',
@@ -68,6 +69,7 @@ function commerce_services_services_resources() {
             array(
               'name' => 'sort_order',
               'type' => 'string',
+              'description' => 'A comma separated list of order specifiers (DESC or ASC) indicating the direction the sort_by values should be applied to the result set.',
               'optional' => TRUE,
               'source' => array('param' => 'sort_order'),
               'default value' => 'DESC',
@@ -125,7 +127,7 @@ function commerce_services_services_resources() {
           'help' => 'Returns a pageable list of products.',
           'callback' => 'commerce_services_product_index',
           'file' => array('type' => 'inc', 'module' => 'commerce_services', 'name' => 'resources/product'),
-          'access arguments' => array('view any commerce_product entity'),
+          'access callback' => 'commerce_services_product_index_access',
           'args' => array(
             array(
               'name' => 'fields',
@@ -136,6 +138,45 @@ function commerce_services_services_resources() {
               'default value' => '',
               'commerce_services_explode' => ',',
               'commerce_services_required_fields' => array('product_id'),
+            ),
+            array(
+              'name' => 'filter',
+              'type' => 'array',
+              'description' => 'An array of field or property names from products paired with values to use to filter the result set.',
+              'optional' => TRUE,
+              'source' => array('param' => 'filter'),
+              'default value' => array(),
+              'commerce_services_field_populate' => 'commerce_product',
+            ),
+            array(
+              'name' => 'filter_op',
+              'type' => 'array',
+              'description' => 'An array of field or property names from products paired with the operator to use when filtering the result set.',
+              'optional' => TRUE,
+              'source' => array('param' => 'filter_op'),
+              'default value' => array(),
+              'commerce_services_match_keys' => array(
+                'arg' => 'filter',
+                'default value' => '=',
+              ),
+            ),
+            array(
+              'name' => 'sort_by',
+              'type' => 'string',
+              'description' => 'A comma separated list of field or property names from products by which to sort the result set.',
+              'optional' => TRUE,
+              'source' => array('param' => 'sort_by'),
+              'default value' => 'product_id',
+              'commerce_services_explode' => ',',
+            ),
+            array(
+              'name' => 'sort_order',
+              'type' => 'string',
+              'description' => 'A comma separated list of order specifiers (DESC or ASC) indicating the direction the sort_by values should be applied to the result set.',
+              'optional' => TRUE,
+              'source' => array('param' => 'sort_order'),
+              'default value' => 'ASC',
+              'commerce_services_explode' => ',',
             ),
             array(
               'name' => 'limit',
@@ -161,7 +202,8 @@ function commerce_services_services_resources() {
           'help' => 'Returns a single product specified by its product ID.',
           'callback' => 'commerce_services_product_retrieve',
           'file' => array('type' => 'inc', 'module' => 'commerce_services', 'name' => 'resources/product'),
-          'access arguments' => array('view any commerce_product entity'),
+          'access callback' => 'commerce_services_product_retrieve_access',
+          'access arguments append' => TRUE,
           'args' => array(
             array(
               'name' => 'product_id',

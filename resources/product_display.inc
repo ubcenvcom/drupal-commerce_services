@@ -54,23 +54,27 @@ function commerce_services_product_display_index($fields, $filter, $filter_op, $
   // Add the specified sort conditions to the query.
   commerce_services_index_query_sort($query, 'node', $sort_by, $sort_order);
 
-  // Execute the query and load the nodes it returns.
+  // Execute the query and load the nodes it returns if any.
   $result = $query->execute();
-  $nodes = node_load_multiple(array_keys($result['node']));
+  $nodes = array();
 
-  // Unset the rdf_mapping key from any loaded node unless explicitly included
-  // in the $fields array.
-  if (!in_array('rdf_mapping', $fields)) {
-    foreach ($nodes as $nid => $node) {
-      unset($node->rdf_mapping);
+  if (!empty($result['node'])) {
+    $nodes = node_load_multiple(array_keys($result['node']));
+
+    // Unset the rdf_mapping key from any loaded node unless explicitly included
+    // in the $fields array.
+    if (!in_array('rdf_mapping', $fields)) {
+      foreach ($nodes as $nid => $node) {
+        unset($node->rdf_mapping);
+      }
     }
-  }
 
-  // Filter out the node properties based on the field list if given; always
-  // remove rdf_mapping unless explicitly requested in the field list.
-  if (!empty($fields)) {
-    foreach ($nodes as $nid => &$node) {
-      commerce_services_object_filter($node, $fields);
+    // Filter out the node properties based on the field list if given; always
+    // remove rdf_mapping unless explicitly requested in the field list.
+    if (!empty($fields)) {
+      foreach ($nodes as $nid => &$node) {
+        commerce_services_object_filter($node, $fields);
+      }
     }
   }
 
