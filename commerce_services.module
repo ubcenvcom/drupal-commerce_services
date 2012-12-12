@@ -37,6 +37,22 @@ function commerce_services_services_resources() {
               'commerce_services_required_fields' => array('nid'),
             ),
             array(
+              'name' => 'expand_entities',
+              'type' => 'int',
+              'description' => 'An integer depth to which entity reference field values should be expanded into full entities in a corresponding property on returned entities.',
+              'optional' => TRUE,
+              'source' => array('param' => 'expand_entities'),
+              'default value' => 1,
+            ),
+            array(
+              'name' => 'flatten_fields',
+              'type' => 'string',
+              'description' => 'A string indicating whether or not field value arrays should be flattened; accepts true or false.',
+              'optional' => TRUE,
+              'source' => array('param' => 'flatten_fields'),
+              'default value' => 'true',
+            ),
+            array(
               'name' => 'filter',
               'type' => 'array',
               'description' => 'An array of field or property names from product display nodes paired with values to use to filter the result set.',
@@ -110,6 +126,22 @@ function commerce_services_services_resources() {
               'optional' => FALSE,
               'source' => array('path' => 0),
             ),
+            array(
+              'name' => 'expand_entities',
+              'type' => 'int',
+              'description' => 'An integer depth to which entity reference field values should be expanded into full entities in a corresponding property on the returned entity.',
+              'optional' => TRUE,
+              'source' => array('param' => 'expand_entities'),
+              'default value' => 1,
+            ),
+            array(
+              'name' => 'flatten_fields',
+              'type' => 'string',
+              'description' => 'A string indicating whether or not field value arrays should be flattened; accepts true or false.',
+              'optional' => TRUE,
+              'source' => array('param' => 'flatten_fields'),
+              'default value' => 'true',
+            ),
           ),
         ),
       ),
@@ -138,6 +170,22 @@ function commerce_services_services_resources() {
               'default value' => '',
               'commerce_services_explode' => ',',
               'commerce_services_required_fields' => array('product_id'),
+            ),
+            array(
+              'name' => 'expand_entities',
+              'type' => 'int',
+              'description' => 'An integer depth to which entity reference field values should be expanded into full entities in a corresponding property on returned entities.',
+              'optional' => TRUE,
+              'source' => array('param' => 'expand_entities'),
+              'default value' => 1,
+            ),
+            array(
+              'name' => 'flatten_fields',
+              'type' => 'string',
+              'description' => 'A string indicating whether or not field value arrays should be flattened; accepts true or false.',
+              'optional' => TRUE,
+              'source' => array('param' => 'flatten_fields'),
+              'default value' => 'true',
             ),
             array(
               'name' => 'filter',
@@ -211,6 +259,22 @@ function commerce_services_services_resources() {
               'description' => 'The product ID of the product to retrieve.',
               'optional' => FALSE,
               'source' => array('path' => 0),
+            ),
+            array(
+              'name' => 'expand_entities',
+              'type' => 'int',
+              'description' => 'An integer depth to which entity reference field values should be expanded into full entities in a corresponding property on returned entities.',
+              'optional' => TRUE,
+              'source' => array('param' => 'expand_entities'),
+              'default value' => 1,
+            ),
+            array(
+              'name' => 'flatten_fields',
+              'type' => 'string',
+              'description' => 'A string indicating whether or not field value arrays should be flattened; accepts true or false.',
+              'optional' => TRUE,
+              'source' => array('param' => 'flatten_fields'),
+              'default value' => 'true',
             ),
           ),
         ),
@@ -618,6 +682,211 @@ function commerce_services_index_query_sort($query, $entity_type, $sort_by, $sor
             }
           }
         }
+      }
+    }
+  }
+}
+
+/**
+ * Expands entity reference field values into full entities in a corresponding
+ * property on the given entity to a specified depth of child entities.
+ *
+ * @param $entity_type
+ *   The machine-name entity type of the given entity.
+ * @param $entity
+ *   The entity whose reference field values should be expanded.
+ * @param $depth
+ *   The depth to which referenced entities should be expanded; a depth of 1
+ *   means only the reference field values on the entity passed to the function
+ *   should be expanded, 2 means those and the entities they reference, etc.
+ * @param $flatten_fields
+ *   Boolean indicating whether or not field value arrays should be flattened.
+ */
+function commerce_services_expand_entities($entity_type, $entity, $depth, $flatten_fields) {
+  // Extract the bundle name.
+  $bundle = field_extract_bundle($entity_type, $entity);
+
+  // Look for each type of Commerce reference field on the given entity.
+  foreach (array('commerce_product_reference', 'commerce_line_item_reference', 'commerce_customer_profile_reference') as $field_type) {
+    // Look for reference field instances of each type on the entity.
+    foreach (field_info_instances($entity_type, $bundle) as $field_name => $instance) {
+      $entities_field_name = $field_name . '_entities';
+      $field_info = field_info_field($field_name);
+
+      if ($field_info['type'] == $field_type) {
+        // Extract the type of referenced entity from the property info.
+        $property_info = entity_get_property_info($entity_type);
+
+        if (!empty($property_info['bundles'][$bundle]['properties'][$field_name]['type'])) {
+          $referenced_entity_type = $property_info['bundles'][$bundle]['properties'][$field_name]['type'];
+          $entity_wrapper = entity_metadata_wrapper($entity_type, $entity);
+
+          // If the field is multi-value, extract the entity type from within
+          // the list markup and expand the whole list.
+          if (substr($referenced_entity_type, 0, 5) == 'list<') {
+            $referenced_entity_type = substr($referenced_entity_type, 5, strlen($referenced_entity_type) - 6);
+
+            foreach ($entity_wrapper->{$field_name} as $delta => $referenced_entity_wrapper) {
+              // Extract the entity from the wrapper.
+              $referenced_entity_id = $referenced_entity_wrapper->raw();
+
+              if (!empty($referenced_entity_id)) {
+                $referenced_entity = clone($referenced_entity_wrapper->value());
+
+                // Decorate the entity.
+                commerce_services_decorate_entity($referenced_entity_type, $referenced_entity);
+
+                // If our entity traversal depth has not reduced to 1, then we
+                // need to recurse to expand any entity reference fields present
+                // on the referenced entity.
+                if ($depth > 1) {
+                  commerce_services_expand_entities($referenced_entity_type, $referenced_entity, $depth - 1, $flatten_fields);
+                }
+
+                // Flatten field value arrays on the referenced entity if directed.
+                if ($flatten_fields) {
+                  commerce_services_flatten_fields($referenced_entity_type, $referenced_entity);
+                }
+
+                // And finally set the referenced entity to be the new value at
+                // the current delta in the reference field value array.
+                $entity->{$entities_field_name}[$referenced_entity_id] = $referenced_entity;
+              }
+            }
+          }
+          else {
+            // Extract the entity and its ID from the wrapper.
+            $referenced_entity_id = $entity_wrapper->{$field_name}->raw();
+
+            if (!empty($referenced_entity_id)) {
+              $referenced_entity = clone($entity_wrapper->{$field_name}->value());
+
+              // Decorate the entity.
+              commerce_services_decorate_entity($referenced_entity_type, $referenced_entity);
+
+              // If our entity traversal depth has not reduced to 1, then we
+              // need to recurse to expand any entity reference fields present
+              // on the referenced entity.
+              if ($depth > 1) {
+                commerce_services_expand_entities($referenced_entity_type, $referenced_entity, $depth - 1, $flatten_fields);
+              }
+
+              // Flatten field value arrays on the referenced entity if directed.
+              if ($flatten_fields) {
+                commerce_services_flatten_fields($referenced_entity_type, $referenced_entity);
+              }
+
+              // And finally set the referenced entity to be the new value at the
+              // current delta in the reference field value array.
+              $entity->{$entities_field_name}[$referenced_entity_id] = $referenced_entity;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Flattens field value arrays on the given entity.
+ *
+ * Field flattening in Commerce Services involves reducing their value arrays to
+ * just the current language of the entity and reducing fields with single
+ * column schemas to simple scalar values or arrays of scalar values.
+ *
+ * Note that because this function irreparably alters an entity's structure, it
+ * should only be called using a clone of the entity whose field value arrays
+ * should be flattened. Otherwise the flattening will affect the entity as
+ * stored in the entity cache, causing potential errors should that entity be
+ * loaded and manipulated later in the same request.
+ *
+ * @param $entity_type
+ *   The machine-name entity type of the given entity.
+ * @param $cloned_entity
+ *   A clone of the entity whose field value arrays should be flattened.
+ */
+function commerce_services_flatten_fields($entity_type, $cloned_entity) {
+  $bundle = field_extract_bundle($entity_type, $cloned_entity);
+  $clone_wrapper = entity_metadata_wrapper($entity_type, $cloned_entity);
+
+  // Loop over every field instance on the given entity.
+  foreach (field_info_instances($entity_type, $bundle) as $field_name => $instance) {
+    // Set the field property to the raw wrapper value, which applies the
+    // desired flattening of the value array.
+    $cloned_entity->{$field_name} = $clone_wrapper->{$field_name}->raw();
+  }
+}
+
+/**
+ * Decorate the given entity with additional helper properties based on its type.
+ *
+ * Product entities will be given an attribute_fields property whose value is an
+ * array of product attribute fields on the product.
+ *
+ * Any instance of a price field will be given a corresponding property named
+ * [field_name]_formatted whose value is the currency formatted price.
+ *
+ * Any instance of a file or image field will be given a corresponding property
+ * named [field_name]_url whose value is the URL to the file or image.
+ *
+ * @param $entity_type
+ *   The machine-name entity type of the given entity.
+ * @param $entity
+ *   The entity whose field value arrays should be flattened.
+ */
+function commerce_services_decorate_entity($entity_type, $entity) {
+  $bundle = field_extract_bundle($entity_type, $entity);
+
+  // If the entity is a product, add a list of its attribute fields to it.
+  if ($entity_type == 'commerce_product') {
+    $entity->attribute_fields = array();
+  }
+
+  // Loop over every field instance on the given entity.
+  foreach (field_info_instances($entity_type, $bundle) as $field_name => $instance) {
+    $field_info = field_info_field($field_name);
+
+    // If the current field instance functions as a product attribute field, add
+    // it to the array.
+    if (module_exists('commerce_cart')) {
+      $commerce_cart_settings = commerce_cart_field_instance_attribute_settings($instance);
+
+      if (!empty($commerce_cart_settings['attribute_field'])) {
+        $entity->attribute_fields[] = $field_name;
+      }
+    }
+
+    // Add formatted price fields to correspond with every price field instance.
+    if ($field_info['type'] == 'commerce_price') {
+      $entity_wrapper = entity_metadata_wrapper($entity_type, $entity);
+      $formatted_field_name = $field_name . '_formatted';
+
+      $entity->{$formatted_field_name} = commerce_currency_format($entity_wrapper->{$field_name}->amount->value(), $entity_wrapper->{$field_name}->currency_code->value(), $entity);
+    }
+
+    // Add a direct URL to correspond with every file field instance.
+    if (in_array($field_info['type'], array('file', 'image'))) {
+      $entity_wrapper =  entity_metadata_wrapper($entity_type, $entity);
+      $url_field_name = $field_name . '_url';
+
+      $field_value = $entity_wrapper->{$field_name}->raw();
+      $url = NULL;
+
+      // If the field value contains a URI...
+      if (!empty($field_value['uri'])) {
+        // And we can generate a URL to the file at that URI...
+        $url = file_create_url($field_value['uri']);
+
+        if (!empty($url)) {
+          // Add it to the entity using the URL field name.
+          $entity->{$url_field_name} = $url;
+        }
+      }
+
+      // If the field value did not have a URI or the URL to the file could not
+      // be determined, add an empty URL string to the entity.
+      if (empty($url)) {
+        $entity->{$url_field_name} = '';
       }
     }
   }

@@ -14,6 +14,13 @@
  *   display node data. If empty, nodes will be returned as loaded with the
  *   exception of rdf_mapping data, which will only ever be included in an index
  *   if it is explicitly requested.
+ * @param $expand_entities
+ *   An integer depth to which entity reference field values should be expanded
+ *   into full entities in a corresponding property on returned entities;
+ *   defaults to 1.
+ * @param $flatten_fields
+ *   A string indicating whether or not field value arrays should be flattened;
+ *   accepts true or false, defaults to true.
  * @param $filter
  *   An associative array of property names, single column field names, or
  *   multi-column field column names with their values to use to filter the
@@ -36,7 +43,7 @@
  * @return
  *   An array of product display nodes.
  */
-function commerce_services_product_display_index($fields, $filter, $filter_op, $sort_by, $sort_order, $limit, $offset) {
+function commerce_services_product_display_index($fields, $expand_entities, $flatten_fields, $filter, $filter_op, $sort_by, $sort_order, $limit, $offset) {
   // Build a query to load all accessible nodes that contain product reference
   // fields, whether those fields have data or not.
   $query = new EntityFieldQuery();
@@ -61,18 +68,32 @@ function commerce_services_product_display_index($fields, $filter, $filter_op, $
   if (!empty($result['node'])) {
     $nodes = node_load_multiple(array_keys($result['node']));
 
-    // Unset the rdf_mapping key from any loaded node unless explicitly included
-    // in the $fields array.
-    if (!in_array('rdf_mapping', $fields)) {
-      foreach ($nodes as $nid => $node) {
+    foreach ($nodes as $nid => &$node) {
+      // Add simplified fields to the entity object for certain field types.
+      commerce_services_decorate_entity('node', $node);
+
+      // Expand referenced entities into the full entity to the specified depth.
+      if ($expand_entities > 0) {
+        commerce_services_expand_entities('node', $node, $expand_entities, $flatten_fields == 'true');
+      }
+
+      // Flatten field value arrays if specified. This must be the last operation
+      // performed as it breaks the standard field data model. An entity whose
+      // fields have thus been flattened is no longer wrappable.
+      if ($flatten_fields == 'true') {
+        $node = clone($node);
+        commerce_services_flatten_fields('node', $node);
+      }
+
+      // Unset the rdf_mapping key from any loaded node unless explicitly included
+      // in the $fields array.
+      if (!in_array('rdf_mapping', $fields)) {
         unset($node->rdf_mapping);
       }
-    }
 
-    // Filter out the node properties based on the field list if given; always
-    // remove rdf_mapping unless explicitly requested in the field list.
-    if (!empty($fields)) {
-      foreach ($nodes as $nid => &$node) {
+      // Filter out the node properties based on the field list if given; always
+      // remove rdf_mapping unless explicitly requested in the field list.
+      if (!empty($fields)) {
         commerce_services_object_filter($node, $fields);
       }
     }
@@ -136,11 +157,18 @@ function commerce_services_product_display_access($op, $args) {
  *
  * @param $nid
  *   The node ID of the product display to retrieve.
+ * @param $expand_entities
+ *   An integer depth to which entity reference field values should be expanded
+ *   into full entities in a corresponding property on returned entities;
+ *   defaults to 1.
+ * @param $flatten_fields
+ *   A string indicating whether or not field value arrays should be flattened;
+ *   accepts true or false, defaults to true.
  *
  * @return
  *   The requested product display node or FALSE if not found.
  */
-function commerce_services_product_display_retrieve($nid) {
+function commerce_services_product_display_retrieve($nid, $expand_entities, $flatten_fields) {
   $node = node_load($nid);
 
   // If the node exists, determine its URI and add it to the node.
@@ -150,6 +178,22 @@ function commerce_services_product_display_retrieve($nid) {
 
     // Unset the uri property if it's on the node to prevent recursion.
     unset($node->uri);
+
+    // Add simplified fields to the entity object for certain field types.
+    commerce_services_decorate_entity('node', $node);
+
+    // Expand referenced entities into the full entity to the specified depth.
+    if ($expand_entities > 0) {
+      commerce_services_expand_entities('node', $node, $expand_entities, $flatten_fields == 'true');
+    }
+
+    // Flatten field value arrays if specified. This must be the last operation
+    // performed as it breaks the standard field data model. An entity whose
+    // fields have thus been flattened is no longer wrappable.
+    if ($flatten_fields == 'true') {
+      $node = clone($node);
+      commerce_services_flatten_fields('node', $node);
+    }
   }
 
   return $node;
