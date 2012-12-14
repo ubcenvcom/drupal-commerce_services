@@ -278,6 +278,24 @@ function commerce_services_services_resources() {
             ),
           ),
         ),
+
+        // Define the delete callback for a DELETE to /product/%commerce_product.
+        'delete' => array(
+          'help' => 'Deletes a single product specified by its product ID.',
+          'callback' => 'commerce_services_product_delete',
+          'file' => array('type' => 'inc', 'module' => 'commerce_services', 'name' => 'resources/product'),
+          'access callback' => 'commerce_services_product_delete_access',
+          'access arguments append' => TRUE,
+          'args' => array(
+            array(
+              'name' => 'product_id',
+              'type' => 'int',
+              'description' => 'The product ID of the product to delete.',
+              'optional' => FALSE,
+              'source' => array('path' => 0),
+            ),
+          ),
+        ),
       ),
     );
   }

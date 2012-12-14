@@ -118,6 +118,13 @@ function commerce_services_product_display_access($op, $args) {
   // First load the node ID from the arguments if available.
   if ($op != 'create' && !empty($args[0])) {
     $node = node_load($args[0]);
+
+    if (empty($node)) {
+      return services_error(t('Product display not found'), 404);
+    }
+  }
+  else {
+    $node = NULL;
   }
 
   // If the request operation is a node create...
