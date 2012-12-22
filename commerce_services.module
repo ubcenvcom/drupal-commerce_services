@@ -879,7 +879,16 @@ function commerce_services_decorate_entity($entity_type, $entity) {
       $entity_wrapper = entity_metadata_wrapper($entity_type, $entity);
       $formatted_field_name = $field_name . '_formatted';
 
-      $entity->{$formatted_field_name} = commerce_currency_format($entity_wrapper->{$field_name}->amount->value(), $entity_wrapper->{$field_name}->currency_code->value(), $entity);
+      // Set the formatted price for a single value field.
+      if ($field_info['cardinality'] == 1) {
+        $entity->{$formatted_field_name} = commerce_currency_format($entity_wrapper->{$field_name}->amount->value(), $entity_wrapper->{$field_name}->currency_code->value(), $entity);
+      }
+      else {
+        // Otherwise loop over the field and format each value.
+        foreach ($entity_wrapper->{$field_name} as $delta => $price_wrapper) {
+          $entity->{$formatted_field_name}[$delta] = commerce_currency_format($price_wrapper->amount->value(), $price_wrapper->currency_code->value(), $entity);
+        }
+      }
     }
 
     // Add a direct URL to correspond with every file field instance.
@@ -887,24 +896,48 @@ function commerce_services_decorate_entity($entity_type, $entity) {
       $entity_wrapper =  entity_metadata_wrapper($entity_type, $entity);
       $url_field_name = $field_name . '_url';
 
-      $field_value = $entity_wrapper->{$field_name}->raw();
-      $url = NULL;
+      // Set the formatted price for a single value field.
+      if ($field_info['cardinality'] == 1) {
+        $field_value = $entity_wrapper->{$field_name}->raw();
+        $entity->{$url_field_name} = '';
+        $url = NULL;
 
-      // If the field value contains a URI...
-      if (!empty($field_value['uri'])) {
-        // And we can generate a URL to the file at that URI...
-        $url = file_create_url($field_value['uri']);
+        // If the field value contains a URI...
+        if (!empty($field_value['uri'])) {
+          // And we can generate a URL to the file at that URI...
+          $url = file_create_url($field_value['uri']);
 
-        if (!empty($url)) {
-          // Add it to the entity using the URL field name.
-          $entity->{$url_field_name} = $url;
+          if (!empty($url)) {
+            // Add it to the entity using the URL field name.
+            $entity->{$url_field_name} = $url;
+          }
         }
       }
+      else {
+        // Otherwise loop over the field and generate each URL.
+        $entity->{$url_field_name} = array();
 
-      // If the field value did not have a URI or the URL to the file could not
-      // be determined, add an empty URL string to the entity.
-      if (empty($url)) {
-        $entity->{$url_field_name} = '';
+        foreach ($entity_wrapper->{$field_name} as $delta => $field_wrapper) {
+          $field_value = $field_wrapper->raw();
+          $url = NULL;
+
+          // If the field value contains a URI...
+          if (!empty($field_value['uri'])) {
+            // And we can generate a URL to the file at that URI...
+            $url = file_create_url($field_value['uri']);
+
+            if (!empty($url)) {
+              // Add it to the entity using the URL field name.
+              $entity->{$url_field_name}[$delta] = $url;
+            }
+          }
+
+          // If the field value did not have a URI or the URL to the file could not
+          // be determined, add an empty URL string to the entity.
+          if (empty($url)) {
+            $entity->{$url_field_name}[$delta] = '';
+          }
+        }
       }
     }
   }
