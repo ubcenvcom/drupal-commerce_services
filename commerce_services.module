@@ -279,6 +279,39 @@ function commerce_services_services_resources() {
           ),
         ),
 
+        // Define the update callback for a PUT to /product/%commerce_product.
+        'update' => array(
+          'help' => 'Updates a single product specified by its product ID.',
+          'callback' => 'commerce_services_product_update',
+          'file' => array('type' => 'inc', 'module' => 'commerce_services', 'name' => 'resources/product'),
+          'access callback' => 'commerce_services_product_update_access',
+          'access arguments append' => TRUE,
+          'args' => array(
+            array(
+              'name' => 'product_id',
+              'type' => 'int',
+              'description' => 'The product ID of the product to delete.',
+              'optional' => FALSE,
+              'source' => array('path' => 0),
+            ),
+            array(
+              'name' => 'data',
+              'type' => 'array',
+              'description' => 'The product data to update.',
+              'optional' => FALSE,
+              'source' => 'data',
+            ),
+            array(
+              'name' => 'flatten_fields',
+              'type' => 'string',
+              'description' => 'A string indicating whether or not field value arrays are flattened; accepts true or false.',
+              'optional' => TRUE,
+              'source' => array('param' => 'flatten_fields'),
+              'default value' => 'true',
+            ),
+          ),
+        ),
+
         // Define the delete callback for a DELETE to /product/%commerce_product.
         'delete' => array(
           'help' => 'Deletes a single product specified by its product ID.',
@@ -571,6 +604,175 @@ function commerce_services_entity_type_fields($entity_type, $bundle = NULL) {
     }
 
     return $combined_fields;
+  }
+}
+
+/**
+ * Validates a value to be assigned to a property on an entity.
+ *
+ * @param $entity_type
+ *   The type of entity requiring validation.
+ * @param $entity
+ *   The actual entity.
+ * @param $property
+ *   The name of the property.
+ * @param $value
+ *   The value to be validated for the property.
+ *
+ * @return
+ *   Boolean indicating whether or not the given value is valid for the
+ *   specified property; TRUE if validity simply cannot be determined.
+ */
+function commerce_services_validate_property_value($entity_type, $entity, $property, $value) {
+  // Do not allow array values to be set to properties.
+  if (is_array($value)) {
+    return FALSE;
+  }
+
+  $properties = entity_get_property_info($entity_type);
+
+  $wrapper = entity_metadata_wrapper($entity_type, $entity);
+
+  // If the property has an options list callback...
+  if ($options = $wrapper->{$property}->optionsList('edit')) {
+    // Ensure the proposed value is an available option.
+    if (!in_array($value, array_keys($options))) {
+      return FALSE;
+    }
+  }
+
+  // If the property is an integer or a date, ensure an integer was given.
+  if (in_array($properties['properties'][$property]['type'], array('integer', 'date')) && !is_int($value)) {
+    return FALSE;
+  }
+
+  return TRUE;
+}
+
+/**
+ * Validates a value to be assigned to a field on an entity.
+ *
+ * @param $entity_type
+ *   The type of entity requiring validation.
+ * @param $entity
+ *   The actual entity.
+ * @param $field_name
+ *   The name of the field.
+ * @param $value
+ *   The value to be validated for the field.
+ *
+ * @return
+ *   Boolean indicating whether or not the given value is valid for the
+ *   specified field; TRUE if validity simply cannot be determined.
+ */
+function commerce_services_validate_field_value($entity_type, $entity, $field_name, $value) {
+  $field_info = field_info_field($field_name);
+
+  // Do not allow array values to be set to single column fields.
+  if (is_array($value) && count($field_info['columns']) == 1) {
+    return FALSE;
+  }
+
+  // Convert $value to an array to simplify further validation.
+  if (!is_array($value)) {
+    $value = array($value);
+  }
+
+  $properties = entity_get_property_info($entity_type);
+  $bundle = field_extract_bundle($entity_type, $entity);
+  $fields = $properties['bundles'][$bundle]['properties'];
+
+  $wrapper = entity_metadata_wrapper($entity_type, $entity);
+
+  // If the field has an options list callback...
+  if ($options = $wrapper->{$field_name}->optionsList('edit')) {
+    // Ensure each proposed value is an available option.
+    foreach ($value as $field_value) {
+      if (!in_array($field_value, array_keys($options))) {
+        return FALSE;
+      }
+    }
+  }
+
+  return TRUE;
+}
+
+/**
+ * Updates the field value array on the given entity.
+ *
+ * @param $entity_type
+ *   The type of entity being updated.
+ * @param $entity
+ *   The actual entity.
+ * @param $field_info
+ *   The field info array for the field being updated.
+ * @param $value
+ *   The single or multi-value field value array to update the field to either
+ *   through a wrapper or the given language.
+ * @param $langcode
+ *   The language to set the field value to if given.
+ *
+ * @todo Update to work when flatten_fields is false; needs to properly choose a
+ * delta value and use the appropriate column name for single column fields.
+ */
+function commerce_services_update_field_value($entity_type, $entity, $field_info, $value, $langcode = NULL) {
+  $field_name = $field_info['field_name'];
+
+  // If the value given is an array...
+  if (is_array($value)) {
+    // Ensure the keys given for the value array all match columns in the field
+    // type's schema.
+    if (count(array_diff_key($value, $field_info['columns'])) > 0) {
+      return services_error(t('Invalid @field value given', array('@field' => $field_name)), 400);
+    }
+  }
+  elseif (count($field_info['columns']) == 1) {
+    // Otherwise, if a scalar was given for a single column field, rewrite the
+    // value to be an array keyed by the column name.
+    $value = array(key($field_info['columns']) => $value);
+  }
+  else {
+    // Return an error if an array was given for a single column field instead
+    // of a scalar.
+    return services_error(t('Invalid @field value given', array('@field' => $field_name)), 400);
+  }
+
+  // The wrapper will not let us set an array value to a single column field,
+  // even if the column matches, so we must first handle single column fields
+  // and then multi-column fields. Check to ensure the field value array keys
+  // match before setting the value.
+  if (count($field_info['columns']) == 1 && key($field_info['columns']) == key($value)) {
+    // If it is a valid value, set it now.
+    if (commerce_services_validate_field_value($entity_type, $entity, $field_name, reset($value))) {
+      // If the field value array is not to be set to a specific language...
+      if (is_null($langcode)) {
+        $wrapper = entity_metadata_wrapper($entity_type, $entity);
+        $wrapper->{$field_name} = reset($value);
+      }
+      else {
+        // Otherwise update the specific language value.
+        $entity->{$field_name}[$langcode] = $value;
+      }
+    }
+    else {
+      return services_error(t('Invalid @field value given', array('@field' => $field_name)), 400);
+    }
+  }
+  else {
+    // For a multi-column field, update only the columns that were specified in
+    // the update request.
+    // @todo Add individual column validation.
+    foreach ($value as $column => $column_value) {
+      // If the field value array is not to be set to a specific language...
+      if (is_null($langcode)) {
+        $wrapper = entity_metadata_wrapper($entity_type, $entity);
+        $wrapper->{$field_name}->$column = $column_value;
+      }
+      else {
+        // Otherwise update the specific language value.
+        $entity->{$field_name}[$langcode][$column] = $column_value;
+      }
+    }
   }
 }
 

@@ -164,6 +164,147 @@ function commerce_services_product_retrieve_access($product_id) {
 }
 
 /**
+ * Updates a product.
+ *
+ * @param $product_id
+ *   The ID of the product to be updated.
+ * @param $data
+ *   The product data to update.
+ * @param $flatten_fields
+ *   A string indicating whether or not field value arrays in the data are
+ *   flattened as in GET requests; accepts true or false, defaults to true.
+ */
+function commerce_services_product_update($product_id, $data, $flatten_fields) {
+  watchdog('debug', $product_id . ' - <pre>'. print_r($data, TRUE) .'</pre>');
+
+  $product = commerce_product_load($product_id);
+  $product_wrapper = entity_metadata_wrapper('commerce_product', $product);
+  $properties = entity_get_property_info('commerce_product');
+  $bundle = field_extract_bundle('commerce_product', $product);
+
+  // Build an array of restricted properties, preventing update requests from
+  // changing IDs and other immutable properties of the entity.
+  $entity_info = entity_get_info('commerce_product');
+  $entity_keys = array_diff_key($entity_info['entity keys'], array('label' => ''));
+
+  $restricted_properties = array_values($entity_keys);
+
+  // Loop over the data submitted with the request.
+  foreach ($data as $key => $value) {
+    // If the current key is a restricted property, return the error.
+    if (in_array($key, $restricted_properties)) {
+      return services_error(t('Property @property cannot be changed', array('@property' => $key)), 400);
+    }
+
+    // If the key is a property name...
+    if (in_array($key, commerce_services_entity_type_properties('commerce_product'))) {
+      // If valid, set it directly to the product.
+      if (commerce_services_validate_property_value('commerce_product', $product, $key, $value)) {
+        $product->{$key} = $value;
+      }
+      else {
+        return services_error(t('Invalid @property value given', array('@property' => $key)), 400);
+      }
+    }
+    else {
+      // Look for the key as a field name in the entity type's field list.
+      $known_field = FALSE;
+
+      foreach (commerce_services_entity_type_fields('commerce_product') as $field_name => $field_type) {
+        // If the key begins with a field name, then either the key is the field
+        // name or is a column of the field.
+        // @todo update the loop to accommodate multi-value field input.
+        if (strpos($key, $field_name) === 0) {
+          $field_info = field_info_field($field_name);
+
+          if ($field_name == $key) {
+            // If the update request sent fields in a flattened format...
+            if ($flatten_fields == 'true') {
+              // Attempt to update the field value without specifying a language
+              // code, depending on the entity metadata wrapper to select the
+              // appropriate default language to update.
+              commerce_services_update_field_value('commerce_product', $product, $field_info, $value);
+            }
+            else {
+              // Otherwise, loop over the languages given and attempt to update
+              // the field value individually for each language code.
+              foreach ($value as $langcode => $item) {
+                commerce_services_update_field_value('commerce_product', $product, $field_info, $item, $langcode);
+              }
+            }
+
+            $known_field = TRUE;
+            break;
+          }
+          else {
+            // Otherwise if the key contains a valid column specification for
+            // the field type, create a value array to set the column directly.
+            $column = substr($key, strlen($field_name) + 1);
+
+            if (in_array($column, array_keys($field_info['columns']))) {
+              if ($flatten_fields == 'true') {
+                commerce_services_update_field_value('commerce_product', $product, $field_info, array($column => $value));
+              }
+              else {
+                foreach ($value as $langcode => $item) {
+                  commerce_services_update_field_value('commerce_product', $product, $field_info, array($column => $item), $langcode);
+                }
+              }
+
+              $known_field = TRUE;
+              break;
+            }
+          }
+        }
+      }
+
+      // If no known field matched, return a 400 error.
+      if (!$known_field) {
+        return services_error(t('Unknown property @name', array('@name' => $key)), 400);
+      }
+    }
+  }
+
+  // Add simplified fields to the entity object for certain field types.
+  commerce_services_decorate_entity('commerce_product', $product);
+
+  // Flatten field value arrays if specified. This must be the last operation
+  // performed as it breaks the standard field data model. An entity whose
+  // fields have thus been flattened is no longer wrappable.
+  if ($flatten_fields == 'true') {
+    $product = clone($product);
+    commerce_services_flatten_fields('commerce_product', $product);
+  }
+
+  return $product;
+}
+
+/**
+ * Determines an API user's access to update a given product.
+ *
+ * @param $product_id
+ *   The ID of the product to be updated.
+ *
+ * @return
+ *   Boolean indicating the user's access to update the product.
+ */
+function commerce_services_product_update_access($product_id) {
+  // Attempt to load the product.
+  if ($product = commerce_product_load($product_id)) {
+    // If the user has access to perform the operation...
+    if (commerce_product_access('update', $product)) {
+      return TRUE;
+    }
+    else {
+      return services_error(t('Access to this operation not granted'), 401);
+    }
+  }
+  else {
+    return services_error(t('Product not found'), 404);
+  }
+}
+
+/**
  * Deletes a product.
  *
  * @param $product_id
