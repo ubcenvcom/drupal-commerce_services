@@ -711,9 +711,6 @@ function commerce_services_validate_field_value($entity_type, $entity, $field_na
  *   through a wrapper or the given language.
  * @param $langcode
  *   The language to set the field value to if given.
- *
- * @todo Update to work when flatten_fields is false; needs to properly choose a
- * delta value and use the appropriate column name for single column fields.
  */
 function commerce_services_update_field_value($entity_type, $entity, $field_info, $value, $langcode = NULL) {
   $field_name = $field_info['field_name'];
@@ -744,15 +741,8 @@ function commerce_services_update_field_value($entity_type, $entity, $field_info
   if (count($field_info['columns']) == 1 && key($field_info['columns']) == key($value)) {
     // If it is a valid value, set it now.
     if (commerce_services_validate_field_value($entity_type, $entity, $field_name, reset($value))) {
-      // If the field value array is not to be set to a specific language...
-      if (is_null($langcode)) {
-        $wrapper = entity_metadata_wrapper($entity_type, $entity);
-        $wrapper->{$field_name} = reset($value);
-      }
-      else {
-        // Otherwise update the specific language value.
-        $entity->{$field_name}[$langcode] = $value;
-      }
+      $wrapper = entity_metadata_wrapper($entity_type, $entity, array('langcode' => $langcode));
+      $wrapper->{$field_name} = reset($value);
     }
     else {
       return services_error(t('Invalid @field value given', array('@field' => $field_name)), 400);
@@ -763,15 +753,8 @@ function commerce_services_update_field_value($entity_type, $entity, $field_info
     // the update request.
     // @todo Add individual column validation.
     foreach ($value as $column => $column_value) {
-      // If the field value array is not to be set to a specific language...
-      if (is_null($langcode)) {
-        $wrapper = entity_metadata_wrapper($entity_type, $entity);
-        $wrapper->{$field_name}->$column = $column_value;
-      }
-      else {
-        // Otherwise update the specific language value.
-        $entity->{$field_name}[$langcode][$column] = $column_value;
-      }
+      $wrapper = entity_metadata_wrapper($entity_type, $entity, array('langcode' => $langcode));
+      $wrapper->{$field_name}->$column = $column_value;
     }
   }
 }
