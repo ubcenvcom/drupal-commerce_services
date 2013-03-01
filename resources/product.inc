@@ -213,23 +213,63 @@ function commerce_services_product_update($product_id, $data, $flatten_fields) {
       foreach (commerce_services_entity_type_fields('commerce_product') as $field_name => $field_type) {
         // If the key begins with a field name, then either the key is the field
         // name or is a column of the field.
-        // @todo update the loop to accommodate multi-value field input.
         if (strpos($key, $field_name) === 0) {
           $field_info = field_info_field($field_name);
+
+          // Because the entity metadata wrapper treats text fields differently
+          // based on whether or not they enable format selection, we also
+          // accommodate the inconsistency here. If a text field does not have
+          // text formatting enabled, we unset that column from the field schema
+          // so it can be set independently as if it were the only column in the
+          // field value.
+          if (in_array($field_info['type'], array('text', 'text_long'))) {
+            $instance_info = field_info_instance('commerce_product', $field_name, $product->type);
+
+            if (empty($instance_info['settings']['text_processing'])) {
+              unset($field_info['columns']['format']);
+            }
+          }
 
           if ($field_name == $key) {
             // If the update request sent fields in a flattened format...
             if ($flatten_fields == 'true') {
-              // Attempt to update the field value without specifying a language
-              // code, depending on the entity metadata wrapper to select the
-              // appropriate default language to update.
-              commerce_services_update_field_value('commerce_product', $product, $field_info, $value);
+              // Update the field value without specifying a language code.
+              if ($field_info['cardinality'] == 1) {
+                commerce_services_update_field_value('commerce_product', $product, $field_info, $value);
+              }
+              else {
+                // For multi-value fields, loop over the value array and pass
+                // the delta value to the update function.
+                foreach ($value as $delta => $item) {
+                  commerce_services_update_field_value('commerce_product', $product, $field_info, $item, NULL, $delta);
+                }
+              }
             }
             else {
               // Otherwise, loop over the languages given and attempt to update
-              // the field value individually for each language code.
-              foreach ($value as $langcode => $item) {
-                commerce_services_update_field_value('commerce_product', $product, $field_info, $item, $langcode);
+              // the field value individually for each language code. Since
+              // field values are not flattened, the value array must include a
+              // language code and delta values even for single-value fields.
+              foreach ($value as $langcode => $items) {
+                // Return an error if the $langcode is unknown or if $items is
+                // not an array.
+                if ($langcode != LANGUAGE_NONE && !in_array($langcode, array_keys(language_list()))) {
+                  return services_error(t('Unknown language @langcode in @field value', array('@langcode' => $langcode, '@field' => $field_name)), 400);
+                }
+                elseif (!is_array($items)) {
+                  return services_error(t('Invalid @field value given', array('@field' => $field_name)), 400);
+                }
+
+                foreach ($items as $delta => $item) {
+                  // If $item is empty, simply unset it at the delta value.
+                  if (empty($item)) {
+                    unset($product->{$field_name}[$langcode][$delta]);
+                  }
+                  else {
+                    // Otherwise update the field value for the delta value.
+                    commerce_services_update_field_value('commerce_product', $product, $field_info, $item, $langcode, $delta);
+                  }
+                }
               }
             }
 
@@ -243,11 +283,25 @@ function commerce_services_product_update($product_id, $data, $flatten_fields) {
 
             if (in_array($column, array_keys($field_info['columns']))) {
               if ($flatten_fields == 'true') {
-                commerce_services_update_field_value('commerce_product', $product, $field_info, array($column => $value));
+                // Directly set single value fields.
+                if ($field_info['cardinality'] == 1) {
+                  commerce_services_update_field_value('commerce_product', $product, $field_info, array($column => $value));
+                }
+                else {
+                  // For multi-value fields, loop over the value array and pass
+                  // the delta value to the update function.
+                  foreach ($value as $delta => $item) {
+                    commerce_services_update_field_value('commerce_product', $product, $field_info, array($column => $item), NULL, $delta);
+                  }
+                }
               }
               else {
-                foreach ($value as $langcode => $item) {
-                  commerce_services_update_field_value('commerce_product', $product, $field_info, array($column => $item), $langcode);
+                // If field values are not flattened, they must include both a
+                // language code and delta values even for single-value fields.
+                foreach ($value as $langcode => $items) {
+                  foreach ($items as $delta => $item) {
+                    commerce_services_update_field_value('commerce_product', $product, $field_info, array($column => $item), $langcode, $delta);
+                  }
                 }
               }
 
@@ -264,6 +318,12 @@ function commerce_services_product_update($product_id, $data, $flatten_fields) {
       }
     }
   }
+
+  // Save the updates to the product.
+  commerce_product_save($product);
+
+  // @todo Post-process textfields by invoking text_field_load() on their values
+  // to get the updated summary and safe_value values.
 
   // Add simplified fields to the entity object for certain field types.
   commerce_services_decorate_entity('commerce_product', $product);

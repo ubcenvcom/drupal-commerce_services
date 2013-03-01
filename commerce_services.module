@@ -712,7 +712,7 @@ function commerce_services_validate_field_value($entity_type, $entity, $field_na
  * @param $langcode
  *   The language to set the field value to if given.
  */
-function commerce_services_update_field_value($entity_type, $entity, $field_info, $value, $langcode = NULL) {
+function commerce_services_update_field_value($entity_type, $entity, $field_info, $value, $langcode = NULL, $delta = NULL) {
   $field_name = $field_info['field_name'];
 
   // If the value given is an array...
@@ -734,28 +734,44 @@ function commerce_services_update_field_value($entity_type, $entity, $field_info
     return services_error(t('Invalid @field value given', array('@field' => $field_name)), 400);
   }
 
-  // The wrapper will not let us set an array value to a single column field,
-  // even if the column matches, so we must first handle single column fields
-  // and then multi-column fields. Check to ensure the field value array keys
-  // match before setting the value.
-  if (count($field_info['columns']) == 1 && key($field_info['columns']) == key($value)) {
-    // If it is a valid value, set it now.
-    if (commerce_services_validate_field_value($entity_type, $entity, $field_name, reset($value))) {
-      $wrapper = entity_metadata_wrapper($entity_type, $entity, array('langcode' => $langcode));
-      $wrapper->{$field_name} = reset($value);
-    }
-    else {
-      return services_error(t('Invalid @field value given', array('@field' => $field_name)), 400);
+  // Default to the entity language if $langcode is not set.
+  if ($langcode === NULL) {
+    $langcode = entity_language($entity_type, $entity);
+
+    if (empty($langcode)) {
+      $langcode = LANGUAGE_NONE;
     }
   }
-  else {
-    // For a multi-column field, update only the columns that were specified in
-    // the update request.
-    // @todo Add individual column validation.
-    foreach ($value as $column => $column_value) {
-      $wrapper = entity_metadata_wrapper($entity_type, $entity, array('langcode' => $langcode));
-      $wrapper->{$field_name}->$column = $column_value;
+
+  // Return an error if a delta value over 0 is given for a single value field.
+  if ($field_info['cardinality'] == 1 && !empty($delta)) {
+    return services_error(t('Invalid delta value @delta given for single-value field @field', array('@delta' => $delta, '@field' => $field_name)), 400);
+  }
+  elseif ($field_info['cardinality'] != 1 && $delta === NULL) {
+    // Return an error if a delta value was not specified for a multi-value field.
+    return services_error(t('Delta value required for multi-value field @field', array('@field' => $field_name)), 400);
+  }
+
+  // If updating a single value field, ensure the delta value matches the
+  // current single delta value. There may be instances where for some reason it
+  // was not zero, so we ensure this is the case by changing the delta key of
+  // the field value array.
+  if ($field_info['cardinality'] == 1) {
+    $current_delta = key($entity->{$field_name}[$langcode]);
+
+    if ($current_delta != 0) {
+      $entity->{$field_name}[$langcode][0] = $entity->{$field_name}[$langcode][$current_delta];
+      unset($entity->{$field_name}[$langcode][$current_delta]);
     }
+
+    // Also, ensure the $delta value is changed from NULL to 0 if necessary.
+    $delta = 0;
+  }
+
+  // Update only the columns that were specified in the update request.
+  // @todo Add individual column validation.
+  foreach ($value as $column => $column_value) {
+    $entity->{$field_name}[$langcode][$delta][$column] = $column_value;
   }
 }
 
