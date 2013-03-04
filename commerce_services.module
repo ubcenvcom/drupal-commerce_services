@@ -1068,9 +1068,7 @@ function commerce_services_decorate_entity($entity_type, $entity) {
     // If the current field instance functions as a product attribute field, add
     // it to the array.
     if (module_exists('commerce_cart')) {
-      $commerce_cart_settings = commerce_cart_field_instance_attribute_settings($instance);
-
-      if (!empty($commerce_cart_settings['attribute_field'])) {
+      if (commerce_cart_field_attribute_eligible($field_info) && commerce_cart_field_instance_is_attribute($instance)) {
         $entity->attribute_fields[] = $field_name;
       }
     }
