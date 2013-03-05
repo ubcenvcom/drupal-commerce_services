@@ -333,9 +333,109 @@ function commerce_services_services_resources() {
   }
 
   if (module_exists('commerce_cart')) {
-    // Define a resource for shopping cart orders, which retrieve and manipulate
-    // orders by user ID.
-    // $resources['cart'] = array();
+    // Define a resource for retrieving a collection of the user's cart orders.
+    $resources['cart'] = array(
+      '#api_version' => 3002,
+      'operations' => array(
+        // Define the index callback for a GET to /cart.
+        'index' => array(
+          'help' => "Returns a pageable list of the current user's shopping cart orders, currently limited to just the current cart.",
+          'callback' => 'commerce_services_cart_index',
+          'file' => array('type' => 'inc', 'module' => 'commerce_services', 'name' => 'resources/cart'),
+          'access callback' => 'commerce_services_cart_index_access',
+          'args' => array(
+            array(
+              'name' => 'fields',
+              'type' => 'string',
+              'description' => 'A comma separated list of field or property names from carts to include in the result set.  Will be converted to an array before being passed to the operation callback.',
+              'optional' => TRUE,
+              'source' => array('param' => 'fields'),
+              'default value' => '',
+              'commerce_services_explode' => ',',
+              'commerce_services_required_fields' => array('order_id'),
+            ),
+            // We currently only expand order entities to the first depth, but
+            // we can choose in the future to update this to expand them to the
+            // second depth by default to embed referenced line items in the
+            // order data and referenced products in the line item data.
+            array(
+              'name' => 'expand_entities',
+              'type' => 'int',
+              'description' => 'An integer depth to which entity reference field values should be expanded into full entities in a corresponding property on returned entities.',
+              'optional' => TRUE,
+              'source' => array('param' => 'expand_entities'),
+              'default value' => 1,
+            ),
+            array(
+              'name' => 'flatten_fields',
+              'type' => 'string',
+              'description' => 'A string indicating whether or not field value arrays should be flattened; accepts true or false.',
+              'optional' => TRUE,
+              'source' => array('param' => 'flatten_fields'),
+              'default value' => 'true',
+            ),
+            array(
+              // Note that even though the filter argument does not include a
+              // default value here, the index callback currently ensures that
+              // the resource filters by the current user's cart order ID.
+              'name' => 'filter',
+              'type' => 'array',
+              'description' => 'An array of field or property names from orders paired with values to use to filter the result set.',
+              'optional' => TRUE,
+              'source' => array('param' => 'filter'),
+              'default value' => array(),
+              'commerce_services_field_populate' => 'commerce_order',
+            ),
+            array(
+              'name' => 'filter_op',
+              'type' => 'array',
+              'description' => 'An array of field or property names from orders paired with the operator to use when filtering the result set.',
+              'optional' => TRUE,
+              'source' => array('param' => 'filter_op'),
+              'default value' => array(),
+              'commerce_services_match_keys' => array(
+                'arg' => 'filter',
+                'default value' => '=',
+              ),
+            ),
+            array(
+              'name' => 'sort_by',
+              'type' => 'string',
+              'description' => 'A comma separated list of field or property names from cart orders by which to sort the result set.',
+              'optional' => TRUE,
+              'source' => array('param' => 'sort_by'),
+              'default value' => 'order_id',
+              'commerce_services_explode' => ',',
+            ),
+            array(
+              'name' => 'sort_order',
+              'type' => 'string',
+              'description' => 'A comma separated list of sort order specifiers (DESC or ASC) indicating the direction the sort_by values should be applied to the result set.',
+              'optional' => TRUE,
+              'source' => array('param' => 'sort_order'),
+              'default value' => 'DESC',
+              'commerce_services_explode' => ',',
+            ),
+            array(
+              'name' => 'limit',
+              'type' => 'int',
+              'description' => 'The number of cart orders to retrieve.',
+              'optional' => TRUE,
+              'source' => array('param' => 'limit'),
+              'default value' => 1,
+            ),
+            array(
+              'name' => 'offset',
+              'type' => 'int',
+              'description' => 'The zero-based index from which to start retrieving cart orders.',
+              'optional' => TRUE,
+              'source' => array('param' => 'offset'),
+              'default value' => 0,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   if (module_exists('commerce_order')) {
@@ -360,6 +460,10 @@ function commerce_services_services_resources() {
               'commerce_services_explode' => ',',
               'commerce_services_required_fields' => array('order_id'),
             ),
+            // We currently only expand order entities to the first depth, but
+            // we can choose in the future to update this to expand them to the
+            // second depth by default to embed referenced line items in the
+            // order data and referenced products in the line item data.
             array(
               'name' => 'expand_entities',
               'type' => 'int',
