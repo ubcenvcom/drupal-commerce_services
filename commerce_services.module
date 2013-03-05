@@ -149,8 +149,7 @@ function commerce_services_services_resources() {
   }
 
   if (module_exists('commerce_product')) {
-    // Define a resource for actual Commerce Product entities, including actions
-    // to add particular products to a shopping cart.
+    // Define a resource for actual Commerce Product entities.
     $resources['product'] = array(
       '#api_version' => 3002,
       'operations' => array(
@@ -220,7 +219,7 @@ function commerce_services_services_resources() {
             array(
               'name' => 'sort_order',
               'type' => 'string',
-              'description' => 'A comma separated list of order specifiers (DESC or ASC) indicating the direction the sort_by values should be applied to the result set.',
+              'description' => 'A comma separated list of sort order specifiers (DESC or ASC) indicating the direction the sort_by values should be applied to the result set.',
               'optional' => TRUE,
               'source' => array('param' => 'sort_order'),
               'default value' => 'ASC',
@@ -341,7 +340,186 @@ function commerce_services_services_resources() {
 
   if (module_exists('commerce_order')) {
     // Define a resource for Commerce Order entities.
-    // $resources['order'] = array();
+    $resources['order'] = array(
+      '#api_version' => 3002,
+      'operations' => array(
+        // Define the index callback for a GET to /order.
+        'index' => array(
+          'help' => 'Returns a pageable list of orders.',
+          'callback' => 'commerce_services_order_index',
+          'file' => array('type' => 'inc', 'module' => 'commerce_services', 'name' => 'resources/order'),
+          'access callback' => 'commerce_services_order_index_access',
+          'args' => array(
+            array(
+              'name' => 'fields',
+              'type' => 'string',
+              'description' => 'A comma separated list of field or property names from orders to include in the result set.  Will be converted to an array before being passed to the operation callback.',
+              'optional' => TRUE,
+              'source' => array('param' => 'fields'),
+              'default value' => '',
+              'commerce_services_explode' => ',',
+              'commerce_services_required_fields' => array('order_id'),
+            ),
+            array(
+              'name' => 'expand_entities',
+              'type' => 'int',
+              'description' => 'An integer depth to which entity reference field values should be expanded into full entities in a corresponding property on returned entities.',
+              'optional' => TRUE,
+              'source' => array('param' => 'expand_entities'),
+              'default value' => 1,
+            ),
+            array(
+              'name' => 'flatten_fields',
+              'type' => 'string',
+              'description' => 'A string indicating whether or not field value arrays should be flattened; accepts true or false.',
+              'optional' => TRUE,
+              'source' => array('param' => 'flatten_fields'),
+              'default value' => 'true',
+            ),
+            array(
+              'name' => 'filter',
+              'type' => 'array',
+              'description' => 'An array of field or property names from orders paired with values to use to filter the result set.',
+              'optional' => TRUE,
+              'source' => array('param' => 'filter'),
+              'default value' => array(),
+              'commerce_services_field_populate' => 'commerce_order',
+            ),
+            array(
+              'name' => 'filter_op',
+              'type' => 'array',
+              'description' => 'An array of field or property names from orders paired with the operator to use when filtering the result set.',
+              'optional' => TRUE,
+              'source' => array('param' => 'filter_op'),
+              'default value' => array(),
+              'commerce_services_match_keys' => array(
+                'arg' => 'filter',
+                'default value' => '=',
+              ),
+            ),
+            array(
+              'name' => 'sort_by',
+              'type' => 'string',
+              'description' => 'A comma separated list of field or property names from orders by which to sort the result set.',
+              'optional' => TRUE,
+              'source' => array('param' => 'sort_by'),
+              'default value' => 'order_id',
+              'commerce_services_explode' => ',',
+            ),
+            array(
+              'name' => 'sort_order',
+              'type' => 'string',
+              'description' => 'A comma separated list of sort order specifiers (DESC or ASC) indicating the direction the sort_by values should be applied to the result set.',
+              'optional' => TRUE,
+              'source' => array('param' => 'sort_order'),
+              'default value' => 'ASC',
+              'commerce_services_explode' => ',',
+            ),
+            array(
+              'name' => 'limit',
+              'type' => 'int',
+              'description' => 'The number of orders to retrieve.',
+              'optional' => TRUE,
+              'source' => array('param' => 'limit'),
+              'default value' => 10,
+            ),
+            array(
+              'name' => 'offset',
+              'type' => 'int',
+              'description' => 'The zero-based index from which to start retrieving orders.',
+              'optional' => TRUE,
+              'source' => array('param' => 'offset'),
+              'default value' => 0,
+            ),
+          ),
+        ),
+
+        // Define the retrieve callback for a GET to /order/%commerce_order.
+        'retrieve' => array(
+          'help' => 'Returns a single order specified by its order ID.',
+          'callback' => 'commerce_services_order_retrieve',
+          'file' => array('type' => 'inc', 'module' => 'commerce_services', 'name' => 'resources/order'),
+          'access callback' => 'commerce_services_order_retrieve_access',
+          'access arguments append' => TRUE,
+          'args' => array(
+            array(
+              'name' => 'order_id',
+              'type' => 'int',
+              'description' => 'The order ID of the order to retrieve.',
+              'optional' => FALSE,
+              'source' => array('path' => 0),
+            ),
+            array(
+              'name' => 'expand_entities',
+              'type' => 'int',
+              'description' => 'An integer depth to which entity reference field values should be expanded into full entities in a corresponding property on returned entities.',
+              'optional' => TRUE,
+              'source' => array('param' => 'expand_entities'),
+              'default value' => 1,
+            ),
+            array(
+              'name' => 'flatten_fields',
+              'type' => 'string',
+              'description' => 'A string indicating whether or not field value arrays should be flattened; accepts true or false.',
+              'optional' => TRUE,
+              'source' => array('param' => 'flatten_fields'),
+              'default value' => 'true',
+            ),
+          ),
+        ),
+
+        // Define the update callback for a PUT to /order/%commerce_order.
+        'update' => array(
+          'help' => 'Updates a single order specified by its order ID.',
+          'callback' => 'commerce_services_order_update',
+          'file' => array('type' => 'inc', 'module' => 'commerce_services', 'name' => 'resources/order'),
+          'access callback' => 'commerce_services_order_update_access',
+          'access arguments append' => TRUE,
+          'args' => array(
+            array(
+              'name' => 'order_id',
+              'type' => 'int',
+              'description' => 'The order ID of the order to delete.',
+              'optional' => FALSE,
+              'source' => array('path' => 0),
+            ),
+            array(
+              'name' => 'data',
+              'type' => 'array',
+              'description' => 'The order data to update.',
+              'optional' => FALSE,
+              'source' => 'data',
+            ),
+            array(
+              'name' => 'flatten_fields',
+              'type' => 'string',
+              'description' => 'A string indicating whether or not field value arrays are flattened; accepts true or false.',
+              'optional' => TRUE,
+              'source' => array('param' => 'flatten_fields'),
+              'default value' => 'true',
+            ),
+          ),
+        ),
+
+        // Define the delete callback for a DELETE to /order/%commerce_order.
+        'delete' => array(
+          'help' => 'Deletes a single order specified by its order ID.',
+          'callback' => 'commerce_services_order_delete',
+          'file' => array('type' => 'inc', 'module' => 'commerce_services', 'name' => 'resources/order'),
+          'access callback' => 'commerce_services_order_delete_access',
+          'access arguments append' => TRUE,
+          'args' => array(
+            array(
+              'name' => 'order_id',
+              'type' => 'int',
+              'description' => 'The order ID of the order to delete.',
+              'optional' => FALSE,
+              'source' => array('path' => 0),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   return $resources;
@@ -545,6 +723,7 @@ function commerce_services_entity_type_properties($entity_type) {
   $properties = drupal_static(__FUNCTION__);
 
   if (!isset($properties[$entity_type])) {
+    $entity_info = entity_get_info($entity_type);
     $info = entity_get_property_info($entity_type);
     $properties[$entity_type] = array();
 
@@ -554,6 +733,12 @@ function commerce_services_entity_type_properties($entity_type) {
       if (!empty($value['schema field'])) {
         $properties[$entity_type][$key] = $value['schema field'];
       }
+    }
+
+    // If the entity type supports revisions, add revision and log to the array
+    // of acceptable properties.
+    if (!empty($entity_info['revision table'])) {
+      $properties[$entity_type] += array('revision', 'log');
     }
   }
 
@@ -634,15 +819,33 @@ function commerce_services_validate_property_value($entity_type, $entity, $prope
   $wrapper = entity_metadata_wrapper($entity_type, $entity);
 
   // If the property has an options list callback...
-  if ($options = $wrapper->{$property}->optionsList('edit')) {
-    // Ensure the proposed value is an available option.
-    if (!in_array($value, array_keys($options))) {
+  if (!empty($wrapper->{$property}) && $options = $wrapper->{$property}->optionsList('edit')) {
+    // Ensure the proposed value is an available option, supporting single depth
+    // options arrays and arrays that use options groups.
+    $match = FALSE;
+
+    foreach ($options as $option_key => $option_value) {
+      if (is_array($option_value)) {
+        if (in_array($value, array_keys($option_value))) {
+          $match = TRUE;
+          break;
+        }
+      }
+      elseif ($option_key == $value) {
+        $match = TRUE;
+        break;
+      }
+    }
+
+    if (!$match) {
       return FALSE;
     }
   }
 
   // If the property is an integer or a date, ensure an integer was given.
-  if (in_array($properties['properties'][$property]['type'], array('integer', 'date')) && !is_int($value)) {
+  if (!empty($properties['properties'][$property]) &&
+    in_array($properties['properties'][$property]['type'], array('integer', 'date')) &&
+    !is_int($value)) {
     return FALSE;
   }
 
@@ -776,6 +979,99 @@ function commerce_services_update_field_value($entity_type, $entity, $field_info
 }
 
 /**
+ * Builds and processes an index query for an entity type's collection resource.
+ *
+ * @param $entity_type
+ *   The machine-name of the entity type the query should be built for.
+ * @param $fields
+ *   An array of field and property names to include in the returned entity
+ *   data. If empty, entities will be returned as loaded.
+ * @param $expand_entities
+ *   An integer depth to which entity reference field values should be expanded
+ *   into full entities in a corresponding property on returned entities;
+ *   defaults to 1.
+ * @param $flatten_fields
+ *   A string indicating whether or not field value arrays should be flattened;
+ *   accepts true or false, defaults to true.
+ * @param $filter
+ *   An associative array of property names, single column field names, or
+ *   multi-column field column names with their values to use to filter the
+ *   result set of the index request.
+ * @param $filter_op
+ *   An associative array of field and property names with the operators to use
+ *   when applying their filter conditions to the index request query.
+ * @param $sort_by
+ *   An array of database fields to sort the query by, with sort fields being
+ *   valid properties, single column field names, or multi-column field column
+ *   names for the matching entity type.
+ * @param $sort_order
+ *   The corresponding sort orders for the fields specified in the $sort_by
+ *   array; one of either 'DESC' or 'ASC'.
+ * @param $limit
+ *   The number of entities to retrieve.
+ * @param $offset
+ *   The zero-based index from which to start retrieving entities.
+ *
+ * @return
+ *   An array of entities satisfying the query conditions and processed as
+ *   specified to include additional read-only properties or flattened field
+ *   value arrays.
+ */
+function commerce_services_index_entities($entity_type, $fields, $expand_entities, $flatten_fields, $filter, $filter_op, $sort_by, $sort_order, $limit, $offset) {
+  $entity_info = entity_get_info($entity_type);
+
+  // Build a query to load all accessible entities.
+  $query = new EntityFieldQuery();
+  $query
+    ->entityCondition('entity_type', $entity_type)
+    ->range($offset, $limit);
+
+  // Add the access query tag if specified for the entity type.
+  if (!empty($entity_info['access arguments']['access tag'])) {
+    $query->addTag($entity_info['access arguments']['access tag']);
+  }
+
+  // Add the specified property and field condtions to the query.
+  commerce_services_index_query_filter($query, $entity_type, $filter, $filter_op);
+
+  // Add the specified sort conditions to the query.
+  commerce_services_index_query_sort($query, $entity_type, $sort_by, $sort_order);
+
+  // Execute the query and load the entities it returns if any.
+  $result = $query->execute();
+  $entities = array();
+
+  if (!empty($result[$entity_type])) {
+    $entities = entity_load($entity_type, array_keys($result[$entity_type]));
+
+    foreach ($entities as $entity_id => &$entity) {
+      // Add simplified fields to the entity object for certain field types.
+      commerce_services_decorate_entity($entity_type, $entity);
+
+      // Expand referenced entities into the full entity to the specified depth.
+      if ($expand_entities > 0) {
+        commerce_services_expand_entities($entity_type, $entity, $expand_entities, $flatten_fields == 'true');
+      }
+
+      // Flatten field value arrays if specified. This must be the last operation
+      // performed as it breaks the standard field data model. An entity whose
+      // fields have thus been flattened is no longer wrappable or writable.
+      if ($flatten_fields == 'true') {
+        $entity = clone($entity);
+        commerce_services_flatten_fields($entity_type, $entity);
+      }
+
+      // Filter out the properties based on the field list if given.
+      if (!empty($fields)) {
+        commerce_services_object_filter($entity, $fields);
+      }
+    }
+  }
+
+  return $entities;
+}
+
+/**
  * Adds property and field conditions to an index EntityFieldQuery.
  *
  * @param $query
@@ -904,6 +1200,232 @@ function commerce_services_index_query_sort($query, $entity_type, $sort_by, $sor
       }
     }
   }
+}
+
+/**
+ * Returns a single entity.
+ *
+ * @param $entity_type
+ *   The machine-name of the type of entity to retrieve.
+ * @param $entity_id
+ *   The ID of the entity to retrieve.
+ * @param $expand_entities
+ *   An integer depth to which entity reference field values should be expanded
+ *   into full entities in a corresponding property on returned entities;
+ *   defaults to 1.
+ * @param $flatten_fields
+ *   A string indicating whether or not field value arrays should be flattened;
+ *   accepts true or false, defaults to true.
+ *
+ * @return
+ *   The requested entity processed as specified to include additional read-only
+ *   properties or flattened field value arrays or FALSE if not found.
+ */
+function commerce_services_retrieve_entity($entity_type, $entity_id, $expand_entities, $flatten_fields) {
+  $entity = entity_load_single($entity_type, $entity_id);
+
+  if (!empty($entity)) {
+    // Add simplified fields to the entity object for certain field types.
+    commerce_services_decorate_entity($entity_type, $entity);
+
+    // Expand referenced entities into the full entity to the specified depth.
+    if ($expand_entities > 0) {
+      commerce_services_expand_entities($entity_type, $entity, $expand_entities, $flatten_fields == 'true');
+    }
+
+    // Flatten field value arrays if specified. This must be the last operation
+    // performed as it breaks the standard field data model. An entity whose
+    // fields have thus been flattened is no longer wrappable.
+    if ($flatten_fields == 'true') {
+      $entity = clone($entity);
+      commerce_services_flatten_fields($entity_type, $entity);
+    }
+  }
+
+  return $entity;
+}
+
+/**
+ * Updates an entity.
+ *
+ * @param $entity_type
+ *   The machine-name of the type of entity to update.
+ * @param $entity_id
+ *   The ID of the entity to update.
+ * @param $data
+ *   The entity data to update.
+ * @param $flatten_fields
+ *   A string indicating whether or not field value arrays in the data are
+ *   flattened as in GET requests; accepts true or false, defaults to true.
+ *
+ * @return
+ *   The updated entity processed as specified to include additional read-only
+ *   properties or flattened field value arrays.
+ */
+function commerce_services_update_entity($entity_type, $entity_id, $data, $flatten_fields) {
+  $entity = entity_load_single($entity_type, $entity_id);
+  $entity_wrapper = entity_metadata_wrapper($entity_type, $entity);
+  $properties = entity_get_property_info($entity_type);
+  $bundle = field_extract_bundle($entity_type, $entity);
+
+  // Build an array of restricted properties, preventing update requests from
+  // changing IDs and other immutable properties of the entity.
+  $entity_info = entity_get_info($entity_type);
+  $entity_keys = array_diff_key($entity_info['entity keys'], array('label' => ''));
+
+  $restricted_properties = array_values($entity_keys);
+
+  // Loop over the data submitted with the request.
+  foreach ($data as $key => $value) {
+    // If the current key is a restricted property, return the error.
+    if (in_array($key, $restricted_properties)) {
+      return services_error(t('Property @property cannot be changed', array('@property' => $key)), 400);
+    }
+
+    // If the key is a property name...
+    if (in_array($key, commerce_services_entity_type_properties($entity_type))) {
+      // If valid, set it directly to the entity.
+      if (commerce_services_validate_property_value($entity_type, $entity, $key, $value)) {
+        $entity->{$key} = $value;
+
+        // If the key was a log message, ensure a new revision is triggered.
+        $entity->revision = TRUE;
+      }
+      else {
+        return services_error(t('Invalid @property value given', array('@property' => $key)), 400);
+      }
+    }
+    else {
+      // Look for the key as a field name in the entity type's field list.
+      $known_field = FALSE;
+
+      foreach (commerce_services_entity_type_fields($entity_type) as $field_name => $field_type) {
+        // If the key begins with a field name, then either the key is the field
+        // name or is a column of the field.
+        if (strpos($key, $field_name) === 0) {
+          $field_info = field_info_field($field_name);
+
+          // Because the entity metadata wrapper treats text fields differently
+          // based on whether or not they enable format selection, we also
+          // accommodate the inconsistency here. If a text field does not have
+          // text formatting enabled, we unset that column from the field schema
+          // so it can be set independently as if it were the only column in the
+          // field value.
+          if (in_array($field_info['type'], array('text', 'text_long'))) {
+            $instance_info = field_info_instance($entity_type, $field_name, $entity->type);
+
+            if (empty($instance_info['settings']['text_processing'])) {
+              unset($field_info['columns']['format']);
+            }
+          }
+
+          if ($field_name == $key) {
+            // If the update request sent fields in a flattened format...
+            if ($flatten_fields == 'true') {
+              // Update the field value without specifying a language code.
+              if ($field_info['cardinality'] == 1) {
+                commerce_services_update_field_value($entity_type, $entity, $field_info, $value);
+              }
+              else {
+                // For multi-value fields, loop over the value array and pass
+                // the delta value to the update function.
+                foreach ($value as $delta => $item) {
+                  commerce_services_update_field_value($entity_type, $entity, $field_info, $item, NULL, $delta);
+                }
+              }
+            }
+            else {
+              // Otherwise, loop over the languages given and attempt to update
+              // the field value individually for each language code. Since
+              // field values are not flattened, the value array must include a
+              // language code and delta values even for single-value fields.
+              foreach ($value as $langcode => $items) {
+                // Return an error if the $langcode is unknown or if $items is
+                // not an array.
+                if ($langcode != LANGUAGE_NONE && !in_array($langcode, array_keys(language_list()))) {
+                  return services_error(t('Unknown language @langcode in @field value', array('@langcode' => $langcode, '@field' => $field_name)), 400);
+                }
+                elseif (!is_array($items)) {
+                  return services_error(t('Invalid @field value given', array('@field' => $field_name)), 400);
+                }
+
+                foreach ($items as $delta => $item) {
+                  // If $item is empty, simply unset it at the delta value.
+                  if (empty($item)) {
+                    unset($entity->{$field_name}[$langcode][$delta]);
+                  }
+                  else {
+                    // Otherwise update the field value for the delta value.
+                    commerce_services_update_field_value($entity_type, $entity, $field_info, $item, $langcode, $delta);
+                  }
+                }
+              }
+            }
+
+            $known_field = TRUE;
+            break;
+          }
+          else {
+            // Otherwise if the key contains a valid column specification for
+            // the field type, create a value array to set the column directly.
+            $column = substr($key, strlen($field_name) + 1);
+
+            if (in_array($column, array_keys($field_info['columns']))) {
+              if ($flatten_fields == 'true') {
+                // Directly set single value fields.
+                if ($field_info['cardinality'] == 1) {
+                  commerce_services_update_field_value($entity_type, $entity, $field_info, array($column => $value));
+                }
+                else {
+                  // For multi-value fields, loop over the value array and pass
+                  // the delta value to the update function.
+                  foreach ($value as $delta => $item) {
+                    commerce_services_update_field_value($entity_type, $entity, $field_info, array($column => $item), NULL, $delta);
+                  }
+                }
+              }
+              else {
+                // If field values are not flattened, they must include both a
+                // language code and delta values even for single-value fields.
+                foreach ($value as $langcode => $items) {
+                  foreach ($items as $delta => $item) {
+                    commerce_services_update_field_value($entity_type, $entity, $field_info, array($column => $item), $langcode, $delta);
+                  }
+                }
+              }
+
+              $known_field = TRUE;
+              break;
+            }
+          }
+        }
+      }
+
+      // If no known field matched, return a 400 error.
+      if (!$known_field) {
+        return services_error(t('Unknown property @name', array('@name' => $key)), 400);
+      }
+    }
+  }
+
+  // Save the updates to the entity.
+  entity_save($entity_type, $entity);
+
+  // @todo Post-process textfields by invoking text_field_load() on their values
+  // to get the updated summary and safe_value values.
+
+  // Add simplified fields to the entity object for certain field types.
+  commerce_services_decorate_entity($entity_type, $entity);
+
+  // Flatten field value arrays if specified. This must be the last operation
+  // performed as it breaks the standard field data model. An entity whose
+  // fields have thus been flattened is no longer wrappable or writable.
+  if ($flatten_fields == 'true') {
+    $entity = clone($entity);
+    commerce_services_flatten_fields($entity_type, $entity);
+  }
+
+  return $entity;
 }
 
 /**
