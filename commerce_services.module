@@ -339,7 +339,7 @@ function commerce_services_services_resources() {
       'operations' => array(
         // Define the index callback for a GET to /cart.
         'index' => array(
-          'help' => "Returns a pageable list of the current user's shopping cart orders, currently limited to just the current cart.",
+          'help' => "Returns a pageable list of the current API user's shopping cart orders, currently limited to just the current cart.",
           'callback' => 'commerce_services_cart_index',
           'file' => array('type' => 'inc', 'module' => 'commerce_services', 'name' => 'resources/cart'),
           'access callback' => 'commerce_services_cart_index_access',
@@ -431,6 +431,34 @@ function commerce_services_services_resources() {
               'optional' => TRUE,
               'source' => array('param' => 'offset'),
               'default value' => 0,
+            ),
+          ),
+        ),
+
+        // Define the create callback for a POST to /cart.
+        'create' => array(
+          'help' => 'Creates a new cart order for the current API user.',
+          'callback' => 'commerce_services_cart_create',
+          'file' => array('type' => 'inc', 'module' => 'commerce_services', 'name' => 'resources/cart'),
+          'access callback' => 'commerce_services_cart_create_access',
+          'args' => array(
+            // Even though the data array could technically accept a uid value,
+            // since the resource is designed to work for the current API user
+            // this value will be ignored and result in an error.
+            array(
+              'name' => 'data',
+              'type' => 'array',
+              'description' => 'The cart order data to set on create.',
+              'optional' => FALSE,
+              'source' => 'data',
+            ),
+            array(
+              'name' => 'flatten_fields',
+              'type' => 'string',
+              'description' => 'A string indicating whether or not field value arrays are flattened; accepts true or false.',
+              'optional' => TRUE,
+              'source' => array('param' => 'flatten_fields'),
+              'default value' => 'true',
             ),
           ),
         ),
@@ -1367,7 +1395,43 @@ function commerce_services_retrieve_entity($entity_type, $entity_id, $expand_ent
  *   properties or flattened field value arrays.
  */
 function commerce_services_update_entity($entity_type, $entity_id, $data, $flatten_fields) {
+  // Load the entity.
   $entity = entity_load_single($entity_type, $entity_id);
+
+  // Set field values using the data provided.
+  commerce_services_set_field_values($entity_type, $entity, $data, $flatten_fields);
+
+  // Save the updates to the entity.
+  entity_save($entity_type, $entity);
+
+  // Add simplified fields to the entity object for certain field types.
+  commerce_services_decorate_entity($entity_type, $entity);
+
+  // Flatten field value arrays if specified. This must be the last operation
+  // performed as it breaks the standard field data model. An entity whose
+  // fields have thus been flattened is no longer wrappable or writable.
+  if ($flatten_fields == 'true') {
+    $entity = clone($entity);
+    commerce_services_flatten_fields($entity_type, $entity);
+  }
+
+  return $entity;
+}
+
+/**
+ * Updates the field and property values on an entity with the data provided.
+ *
+ * @param $entity_type
+ *   The machine-name of the type of entity to update.
+ * @param $entity
+ *   The entity to update.
+ * @param $data
+ *   The entity data to update.
+ * @param $flatten_fields
+ *   A string indicating whether or not field value arrays in the data are
+ *   flattened as in GET requests; accepts true or false, defaults to true.
+ */
+function commerce_services_set_field_values($entity_type, $entity, $data, $flatten_fields) {
   $entity_wrapper = entity_metadata_wrapper($entity_type, $entity);
   $properties = entity_get_property_info($entity_type);
   $bundle = field_extract_bundle($entity_type, $entity);
@@ -1512,24 +1576,8 @@ function commerce_services_update_entity($entity_type, $entity_id, $data, $flatt
     }
   }
 
-  // Save the updates to the entity.
-  entity_save($entity_type, $entity);
-
   // @todo Post-process textfields by invoking text_field_load() on their values
   // to get the updated summary and safe_value values.
-
-  // Add simplified fields to the entity object for certain field types.
-  commerce_services_decorate_entity($entity_type, $entity);
-
-  // Flatten field value arrays if specified. This must be the last operation
-  // performed as it breaks the standard field data model. An entity whose
-  // fields have thus been flattened is no longer wrappable or writable.
-  if ($flatten_fields == 'true') {
-    $entity = clone($entity);
-    commerce_services_flatten_fields($entity_type, $entity);
-  }
-
-  return $entity;
 }
 
 /**
