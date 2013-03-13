@@ -1762,17 +1762,17 @@ function commerce_services_set_field_values($entity_type, $entity, $data, $flatt
   $entity_info = entity_get_info($entity_type);
   $entity_keys = array_diff_key($entity_info['entity keys'], array('label' => ''));
 
-  $restricted_properties = array_values($entity_keys);
+  $protected_properties = array_values($entity_keys);
 
   // Loop over the data submitted with the request.
   foreach ($data as $key => $value) {
-    // If the current key is a restricted property, return the error.
-    if (in_array($key, $restricted_properties)) {
-      return services_error(t('Property @property cannot be changed', array('@property' => $key)), 400);
-    }
-
     // If the key is a property name...
     if (in_array($key, commerce_services_entity_type_properties($entity_type))) {
+      // If it attempts to change a protected property, return the error.
+      if (in_array($key, $protected_properties) && $entity->{$key} != $value) {
+        return services_error(t('Property @property cannot be changed', array('@property' => $key)), 400);
+      }
+
       // If valid, set it directly to the entity.
       if (commerce_services_validate_property_value($entity_type, $entity, $key, $value)) {
         $entity->{$key} = $value;
