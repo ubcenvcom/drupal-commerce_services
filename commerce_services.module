@@ -2051,6 +2051,11 @@ function commerce_services_flatten_fields($entity_type, $cloned_entity) {
 function commerce_services_decorate_entity($entity_type, $entity) {
   $bundle = field_extract_bundle($entity_type, $entity);
 
+  // If the entity is a line item, add its title to it.
+  if ($entity_type == 'commerce_line_item') {
+    $entity->line_item_title = commerce_line_item_title($entity);
+  }
+
   // If the entity is a product, add a list of its attribute fields to it.
   if ($entity_type == 'commerce_product') {
     $entity->attribute_fields = array();
