@@ -278,6 +278,34 @@ function commerce_services_services_resources() {
           ),
         ),
 
+        // Define the create callback for a POST to /product.
+        'create' => array(
+          'help' => 'Creates a new product for the current API user.',
+          'callback' => 'commerce_services_product_create',
+          'file' => array('type' => 'inc', 'module' => 'commerce_services', 'name' => 'resources/product'),
+          'access callback' => 'commerce_services_product_create_access',
+          'args' => array(
+            // The data array must include valid values for the type, sku, and
+            // title properties and at least an amount and currency_code value
+            // for the default commerce_price field.
+            array(
+              'name' => 'data',
+              'type' => 'array',
+              'description' => 'The product data to set on create.',
+              'optional' => FALSE,
+              'source' => 'data',
+            ),
+            array(
+              'name' => 'flatten_fields',
+              'type' => 'string',
+              'description' => 'A string indicating whether or not field value arrays are flattened; accepts true or false.',
+              'optional' => TRUE,
+              'source' => array('param' => 'flatten_fields'),
+              'default value' => 'true',
+            ),
+          ),
+        ),
+
         // Define the update callback for a PUT to /product/%commerce_product.
         'update' => array(
           'help' => 'Updates a single product specified by its product ID.',
@@ -1757,7 +1785,7 @@ function commerce_services_set_field_values($entity_type, $entity, $data, $flatt
   $properties = entity_get_property_info($entity_type);
   $bundle = field_extract_bundle($entity_type, $entity);
 
-  // Build an array of restricted properties, preventing update requests from
+  // Build an array of protected properties, preventing update requests from
   // changing IDs and other immutable properties of the entity.
   $entity_info = entity_get_info($entity_type);
   $entity_keys = array_diff_key($entity_info['entity keys'], array('label' => ''));
