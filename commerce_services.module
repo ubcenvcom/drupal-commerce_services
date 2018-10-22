@@ -1553,6 +1553,17 @@ function commerce_services_index_entities($entity_type, $fields, $expand_entitie
 }
 
 /**
+ * Checks if given operator is valid.
+ *
+ * @param $operator
+ *   Raw EntityFieldQuery->propertyCondition() operator to validate from request.
+ *
+ */
+function commerce_services_validate_operator($operator) {
+  return in_array($operator, array('=', '!=', '<>', '>', '>=', '<', '<=', 'STARTS_WITH', 'CONTAINS', 'IN', 'NOT IN','BETWEEN', 'LIKE'));
+}
+
+/**
  * Adds property and field conditions to an index EntityFieldQuery.
  *
  * @param $query
@@ -1577,13 +1588,17 @@ function commerce_services_index_query_filter($query, $entity_type, $filter, $fi
     $operator = '=';
 
     if (!empty($filter_op[$filter_field])) {
-      $operator = $filter_op[$filter_field];
+      if (commerce_services_validate_operator($filter_op[$filter_field]))
+        $operator = $filter_op[$filter_field];
+      else
+        return services_error(t('Invalid filter operator @operator for field @field',
+          array('@operator' => $filter_op[$filter_field], '@field'=>$filter_field)), 400);
     }
 
     // If the current filter field is a property, use a property condition.
     $properties = commerce_services_entity_type_properties($entity_type);
 
-    if (in_array($filter_field, array_keys($properties))) {
+    if (in_array($filter_field, array_keys($properties), true)) {
       $query->propertyCondition($properties[$filter_field], $filter_value, $operator);
     }
     else {
