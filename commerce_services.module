@@ -2131,7 +2131,7 @@ function commerce_services_decorate_entity($entity_type, $entity) {
     }
 
     // Add formatted price fields to correspond with every price field instance.
-    if ($field_info['type'] == 'commerce_price') {
+    if ($field_info['type'] == 'commerce_price' && !empty($entity->{$field_name})) {
       $entity_wrapper = entity_metadata_wrapper($entity_type, $entity);
       $formatted_field_name = $field_name . '_formatted';
 
