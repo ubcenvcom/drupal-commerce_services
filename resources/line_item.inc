@@ -92,6 +92,8 @@ function commerce_services_line_item_create($data, $flatten_fields) {
       else {
         $product = commerce_product_load($data['commerce_product']['und'][0]);
       }
+    } else if (!empty($data['line_item_label'])) {
+	$product = commerce_product_load_by_sku(trim($data['line_item_label']));
     }
 
     // Bail now if the product wasn't found.
