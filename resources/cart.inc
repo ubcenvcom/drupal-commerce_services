@@ -87,6 +87,39 @@ function commerce_services_cart_create($data, $flatten_fields) {
   return $order;
 }
 
+function commerce_services_cart_checkout($data, $flatten_fields) {
+  global $user;
+
+  $uid = !empty($user->uid) ? $user->uid : 0;
+  // $order_id = commerce_cart_order_id($uid);
+
+  $order = commerce_cart_order_load($uid);
+  if (!$order)
+    return services_error(t('Cart not found.'), 404);
+
+  // We check for empty cart so we can report it back
+  $wrapper = entity_metadata_wrapper('commerce_order', $order);
+  if (commerce_line_items_quantity($wrapper->commerce_line_items, commerce_product_line_item_types())==0) {
+    return services_error(t('Cart is empty'), 400);
+  }
+
+  if (!commerce_checkout_order_can_checkout($order)) {
+    return services_error(t('Checkout not possible at this time'), 400);
+  }
+
+  commerce_checkout_complete($order);
+
+  commerce_services_decorate_entity('commerce_order', $order);
+
+  if ($flatten_fields == 'true') {
+    $order = clone($order);
+    commerce_services_flatten_fields('commerce_order', $order);
+  }
+
+  return $order;
+}
+
+
 /**
  * Determines an API user's access to create new cart orders.
  */
