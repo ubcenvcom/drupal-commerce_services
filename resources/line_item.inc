@@ -74,6 +74,14 @@ function commerce_services_line_item_create($data, $flatten_fields) {
     $data['quantity'] = 1;
   }
 
+  // If order id is not set then we assumme the current users cart
+  if (empty($data['order_id'])) {
+    global $user;
+
+    $uid = !empty($user->uid) ? $user->uid : 0;
+    $data['order_id'] = commerce_cart_order_id($uid);
+  }
+
   // Create the new line item.
   $line_item = commerce_line_item_new($data['type'], $data['order_id']);
 
@@ -139,6 +147,12 @@ function commerce_services_line_item_create_access($data) {
 
   if (!empty($data['order_id'])) {
     $order = commerce_order_load($data['order_id']);
+  } else {
+    global $user;
+
+    $uid = !empty($user->uid) ? $user->uid : 0;
+    $order_id = commerce_cart_order_id($uid);
+    $order = commerce_order_load($order_id);
   }
 
   if (empty($order)) {
