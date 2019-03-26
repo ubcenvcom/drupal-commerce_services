@@ -360,6 +360,24 @@ function commerce_services_services_resources() {
     );
   }
 
+  // Product types
+  if (module_exists('commerce_product')) {
+    // Define a resource for actual Commerce Product entities.
+    $resources['product_types'] = array(
+      '#api_version' => 3002,
+      'operations' => array(
+        // Define the index callback for a GET to /product_types.
+        'index' => array(
+          'help' => 'Returns a list of product types.',
+          'callback' => 'commerce_services_product_types_index',
+          'file' => array('type' => 'inc', 'module' => 'commerce_services', 'name' => 'resources/product_types'),
+          'access callback' => 'commerce_services_product_types_index_access',
+          'args' => array()
+        ),
+      ),
+    );
+  }
+
   if (module_exists('commerce_cart')) {
     // Define a resource for retrieving a collection of the user's cart orders.
     $resources['cart'] = array(
