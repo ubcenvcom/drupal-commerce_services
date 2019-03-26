@@ -107,6 +107,11 @@ function commerce_services_cart_checkout($data, $flatten_fields) {
     return services_error(t('Checkout not possible at this time'), 400);
   }
 
+  if (module_exists('commerce_stock')) {
+    if (commerce_stock_order_has_out_of_stock($order))
+      return services_error(t('Cart contains out of stock products.'), 409);
+  }
+
   commerce_checkout_complete($order);
 
   commerce_services_decorate_entity('commerce_order', $order);
