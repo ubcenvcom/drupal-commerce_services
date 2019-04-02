@@ -1637,17 +1637,18 @@ function commerce_services_index_query_filter($query, $entity_type, $filter, $fi
     $operator = '=';
 
     if (!empty($filter_op[$filter_field])) {
-      if (commerce_services_validate_operator($filter_op[$filter_field]))
+      if (commerce_services_validate_operator($filter_op[$filter_field])) {
         $operator = $filter_op[$filter_field];
-      else
+      } else {
         return services_error(t('Invalid filter operator @operator for field @field',
           array('@operator' => $filter_op[$filter_field], '@field'=>$filter_field)), 400);
+      }
     }
 
     // If the current filter field is a property, use a property condition.
     $properties = commerce_services_entity_type_properties($entity_type);
 
-    if (in_array($filter_field, array_keys($properties), true)) {
+    if (in_array($filter_field, array_keys($properties), TRUE)) {
       $query->propertyCondition($properties[$filter_field], $filter_value, $operator);
     }
     else {
